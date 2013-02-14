@@ -46,7 +46,7 @@ class Whooshee(object):
 
     def __init__(self, app):
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
-        self.whooshees = []
+        self.whoosheers = []
         self.search_string_min_len = app.config.get('WHOSHEE_MIN_STRING_LEN', 3)
         models_committed.connect(self.on_commit, sender=app)
 
@@ -55,7 +55,7 @@ class Whooshee(object):
             wh.search_string_min_len = self.search_string_min_len
         if not hasattr(wh, 'index_subdir'):
             wh.index_subdir = self.camel_to_snake(wh.__name__)
-        self.whooshees.append(wh)
+        self.whoosheers.append(wh)
         self.create_index(wh)
         return wh
 
@@ -70,7 +70,7 @@ class Whooshee(object):
         wh.index = index
 
     def on_commit(self, app, changes):
-        for wh in self.whooshees:
+        for wh in self.whoosheers:
             writer = wh.index.writer()
             for change in changes:
                 if change[0].__class__ in wh.models:
