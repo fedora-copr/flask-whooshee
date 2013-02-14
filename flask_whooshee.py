@@ -9,7 +9,7 @@ import whoosh.qparser
 
 from flask.ext.sqlalchemy import models_committed
 
-class AbstractSchema(object):
+class AbstractWhooshee(object):
     __metaclass__ = abc.ABCMeta
     models = []
     index_subdir = 'subdir'
@@ -38,36 +38,38 @@ class AbstractSchema(object):
         # TODO: some sanitization
         return s
 
+class ModelWhooshee(AbstractWhooshee):
+    pass
+
 class Whooshee(object):
     def __init__(self, app):
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
-        self.schemas = []
+        self.whooshees = []
         self.search_string_min_len = app.config.get('WHOSHEE_MIN_STRING_LEN', 3)
         models_committed.connect(self.on_commit, sender=app)
 
-    def register_schema(self, schema):
-        if not hasattr(schema, 'search_string_min_len'):
-            schema.search_string_min_len = self.search_string_min_len
-        self.schemas.append(schema)
-        self.create_index(schema)
-        return schema
+    def register_whooshee(self, wh):
+        if not hasattr(wh, 'search_string_min_len'):
+            wh.search_string_min_len = self.search_string_min_len
+        self.whooshees.append(wh)
+        self.create_index(wh)
+        return wh
 
-    def create_index(self, schema):
-        index_path = os.path.join(self.index_path_root, schema.index_subdir)
+    def create_index(self, wh):
+        index_path = os.path.join(self.index_path_root, wh.index_subdir)
         if whoosh.index.exists_in(index_path):
             index = whoosh.index.open_dir(index_path)
         else:
             if not os.path.exists(index_path):
                 os.makedirs(index_path)
-            index = whoosh.index.create_in(index_path, schema.Schema)
-        schema.index = index
+            index = whoosh.index.create_in(index_path, wh.Schema)
+        wh.index = index
 
     def on_commit(self, app, changes):
-        for schema in schemas:
-            writer = schema.index.writer()
+        for wh in self.whooshees:
+            writer = wh.index.writer()
             for change in changes:
-                if change[0].__class__ in schema.models:
+                if change[0].__class__ in wh.models:
                     method_name = '{0}_{1}'.format(change[1], change[0].__class__.__name__.lower())
-                    getattr(schema, method_name)(writer, change[0])
+                    getattr(wh, method_name)(writer, change[0])
             writer.commit()
-
