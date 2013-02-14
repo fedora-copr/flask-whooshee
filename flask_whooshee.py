@@ -9,7 +9,7 @@ import whoosh.qparser
 
 from flask.ext.sqlalchemy import models_committed
 
-class AbstractWhooshee(object):
+class AbstractWhoosheer(object):
     __metaclass__ = abc.ABCMeta
     models = []
     index_subdir = 'subdir'
@@ -38,7 +38,7 @@ class AbstractWhooshee(object):
         # TODO: some sanitization
         return s
 
-class ModelWhooshee(AbstractWhooshee):
+class ModelWhoosheer(AbstractWhoosheer):
     pass
 
 class Whooshee(object):
