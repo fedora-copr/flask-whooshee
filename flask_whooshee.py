@@ -50,7 +50,7 @@ class Whooshee(object):
         self.search_string_min_len = app.config.get('WHOSHEE_MIN_STRING_LEN', 3)
         models_committed.connect(self.on_commit, sender=app)
 
-    def register_whooshee(self, wh):
+    def register_whoosheer(self, wh):
         if not hasattr(wh, 'search_string_min_len'):
             wh.search_string_min_len = self.search_string_min_len
         if not hasattr(wh, 'index_subdir'):
