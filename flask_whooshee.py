@@ -13,10 +13,10 @@ class AbstractWhoosheer(object):
     __metaclass__ = abc.ABCMeta
 
     @classmethod
-    def search(cls, search_string, values_of=''):
-        prepped_string = cls.prep_search_string(search_string)
+    def search(cls, search_string, values_of='', group=whoosh.qparser.OrGroup, match_substrings=True):
+        prepped_string = cls.prep_search_string(search_string, match_substrings)
         with cls.index.searcher() as searcher:
-            parser = whoosh.qparser.MultifieldParser(cls.schema.names(), cls.index.schema)
+            parser = whoosh.qparser.MultifieldParser(cls.schema.names(), cls.index.schema, group=group)
             query = parser.parse(prepped_string)
             results = searcher.search(query)
             if values_of:
@@ -24,14 +24,15 @@ class AbstractWhoosheer(object):
             return results
 
     @classmethod
-    def prep_search_string(cls, search_string):
+    def prep_search_string(cls, search_string, match_substrings):
         s = search_string.strip()
         # we don't want stars from user
         s = s.replace('*', '')
         if len(s) < cls.search_string_min_len:
             raise ValueError('Search string must have at least 3 characters')
-        # replace multiple whitechars with one space
-        s = u'*{0}*'.format(re.sub('[\s]+', '*', s))
+        # replace multiple with star space star
+        if match_substrings:
+            s = u'*{0}*'.format(re.sub('[\s]+', '* *', s))
         # TODO: some sanitization
         return s
 
