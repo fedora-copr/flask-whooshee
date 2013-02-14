@@ -12,7 +12,6 @@ from flask.ext.sqlalchemy import models_committed
 class AbstractWhoosheer(object):
     __metaclass__ = abc.ABCMeta
     models = []
-    index_subdir = 'subdir'
     index = None
 
     @classmethod
@@ -42,6 +41,9 @@ class ModelWhoosheer(AbstractWhoosheer):
     pass
 
 class Whooshee(object):
+    _underscore_re1 = re.compile(r'(.)([A-Z][a-z]+)')
+    _underscore_re2 = re.compile('([a-z0-9])([A-Z])')
+
     def __init__(self, app):
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
         self.whooshees = []
@@ -51,6 +53,8 @@ class Whooshee(object):
     def register_whooshee(self, wh):
         if not hasattr(wh, 'search_string_min_len'):
             wh.search_string_min_len = self.search_string_min_len
+        if not hasattr(wh, 'index_subdir'):
+            wh.index_subdir = self.camel_to_snake(wh.__name__)
         self.whooshees.append(wh)
         self.create_index(wh)
         return wh
@@ -73,3 +77,6 @@ class Whooshee(object):
                     method_name = '{0}_{1}'.format(change[1], change[0].__class__.__name__.lower())
                     getattr(wh, method_name)(writer, change[0])
             writer.commit()
+
+    def camel_to_snake(self, s):
+        return self._underscore_re2.sub(r'\1_\2', self._underscore_re1.sub(r'\1_\2', s)).lower()
