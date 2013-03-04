@@ -1,4 +1,4 @@
-sk-whooshee
+flask-whooshee
 ==============
 
 Customizable Flask - SQLAlchemy - Whoosh integration
@@ -60,7 +60,8 @@ class Entry(db.Model):
 # create a custom whoosheer class
 @whooshee.register_whoosheer
 class EntryUserWhoosheer(AbstractWhoosheer):
-    # create schema, the unique attribute must be in form model.__name__.lower() + '_' + 'id' (name of model primary key)
+    # create schema, the unique attribute must be in form of
+    # model.__name__.lower() + '_' + 'id' (name of model primary key)
     schema = whoosh.fields.Schema(
         entry_id = whoosh.fields.NUMERIC(stored=True, unique=True),
         user_id = whoosh.fields.NUMERIC(stored=True),
