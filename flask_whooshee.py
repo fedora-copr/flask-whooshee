@@ -39,7 +39,7 @@ class WhoosheeQuery(BaseQuery):
         # transform unique field name into model attribute field
         attr = None
 
-        if whoosheer._is_model_whoosheer:
+        if hasattr(whoosheer, '_is_model_whoosheer'):
             attr = getattr(whoosheer.models[0], uniq)
         else:
             # non-model whoosheers must have unique field named
