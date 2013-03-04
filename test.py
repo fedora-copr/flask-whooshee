@@ -26,8 +26,8 @@ class Tests(TestCase):
         @self.wh.register_model('title', 'content')
         class Entry(self.db.Model):
             id = self.db.Column(self.db.Integer, primary_key=True)
-            title = self.db.Column(self.db.Text)
-            content = self.db.Column(self.db.String)
+            title = self.db.Column(self.db.String)
+            content = self.db.Column(self.db.Text)
             user = self.db.relationship(User, backref = self.db.backref('entries'))
             user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
 
