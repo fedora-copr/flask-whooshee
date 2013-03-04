@@ -7,7 +7,41 @@ import whoosh.fields
 import whoosh.index
 import whoosh.qparser
 
-from flask.ext.sqlalchemy import models_committed
+from flask.ext.sqlalchemy import models_committed, BaseQuery
+
+class WhoosheeQuery(BaseQuery):
+    # TODO: add an option to override used Whoosheer
+    def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, match_substrings=True):
+        ### inspiration taken from flask-WhooshAlchemy
+        # find out all entities in join
+        entities = set()
+        # directly queried entities
+        for cd in self.column_descriptions:
+            entities.add(cd['type'])
+        # joined entities
+        entities.update(set(self._join_entities))
+
+        whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == entities)
+
+        # TODO what if unique field doesn't exist or there are multiple?
+        for fname, field in whoosheer.schema._fields.items():
+            if field.unique:
+                uniq = fname
+
+        # TODO: use something more general than id
+        res = whoosheer.search(search_string=search_string,
+                               values_of=uniq,
+                               group=group,
+                               match_substrings=match_substrings)
+        if not res:
+            return self.filter('null')
+
+        # transform unique field name into model field
+        for m in whoosheer.models:
+            if m.__name__.lower() == uniq.split('_')[0]:
+                attr = getattr(m, uniq.split('_')[1])
+
+        return self.filter(attr.in_(res))
 
 class AbstractWhoosheer(object):
     __metaclass__ = abc.ABCMeta
@@ -39,10 +73,10 @@ class AbstractWhoosheer(object):
 class Whooshee(object):
     _underscore_re1 = re.compile(r'(.)([A-Z][a-z]+)')
     _underscore_re2 = re.compile('([a-z0-9])([A-Z])')
+    whoosheers = []
 
     def __init__(self, app):
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
-        self.whoosheers = []
         self.search_string_min_len = app.config.get('WHOSHEE_MIN_STRING_LEN', 3)
         models_committed.connect(self.on_commit, sender=app)
         if not os.path.exists(self.index_path_root):
@@ -53,8 +87,10 @@ class Whooshee(object):
             wh.search_string_min_len = self.search_string_min_len
         if not hasattr(wh, 'index_subdir'):
             wh.index_subdir = self.camel_to_snake(wh.__name__)
-        self.whoosheers.append(wh)
+        self.__class__.whoosheers.append(wh)
         self.create_index(wh)
+        for model in wh.models:
+            model.query_class = WhoosheeQuery
         return wh
 
     def register_model(self, *index_fields):
@@ -116,7 +152,7 @@ class Whooshee(object):
         wh.index = index
 
     def on_commit(self, app, changes):
-        for wh in self.whoosheers:
+        for wh in self.__class__.whoosheers:
             writer = wh.index.writer()
             for change in changes:
                 if change[0].__class__ in wh.models:
