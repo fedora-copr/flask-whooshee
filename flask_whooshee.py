@@ -36,10 +36,17 @@ class WhoosheeQuery(BaseQuery):
         if not res:
             return self.filter('null')
 
-        # transform unique field name into model field
-        for m in whoosheer.models:
-            if m.__name__.lower() == uniq.split('_')[0]:
-                attr = getattr(m, uniq.split('_')[1])
+        # transform unique field name into model attribute field
+        attr = None
+
+        if whoosheer._is_model_whoosheer:
+            attr = getattr(whoosheer.models[0], uniq)
+        else:
+            # non-model whoosheers must have unique field named
+            # model.__name__.lower + '_' + attr
+            for m in whoosheer.models:
+                if m.__name__.lower() == uniq.split('_')[0]:
+                    attr = getattr(m, uniq.split('_')[1])
 
         return self.filter(attr.in_(res))
 
@@ -112,6 +119,9 @@ class Whooshee(object):
                 elif field.name in index_fields:
                     schema_attrs[field.name] = whoosh.fields.TEXT()
             mwh.schema = whoosh.fields.Schema(**schema_attrs)
+            # we can't check with isinstance, because ModelWhoosheer is private
+            # so use this attribute to find out
+            mwh._is_model_whoosheer = True
 
             @classmethod
             def update_model(cls, writer, model):
