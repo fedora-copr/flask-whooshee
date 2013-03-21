@@ -93,6 +93,8 @@ class Whooshee(object):
         if not hasattr(wh, 'search_string_min_len'):
             wh.search_string_min_len = self.search_string_min_len
         if not hasattr(wh, 'index_subdir'):
+            # TODO: do we really want/need to use camel casing?
+            # everywhere else, there is just .lower()
             wh.index_subdir = self.camel_to_snake(wh.__name__)
         self.__class__.whoosheers.append(wh)
         self.create_index(wh)
