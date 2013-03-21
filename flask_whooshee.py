@@ -19,7 +19,7 @@ class WhoosheeQuery(BaseQuery):
         for cd in self.column_descriptions:
             entities.add(cd['type'])
         # joined entities
-        entities.update(set(self._join_entities))
+        entities.update(set(map(lambda x: x.entity, self._join_entities)))
 
         whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == entities)
 
