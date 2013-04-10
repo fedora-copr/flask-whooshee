@@ -8,6 +8,7 @@ import whoosh.index
 import whoosh.qparser
 
 from flask.ext.sqlalchemy import models_committed, BaseQuery
+from sqlalchemy.orm.mapper import Mapper
 
 class WhoosheeQuery(BaseQuery):
     # TODO: add an option to override used Whoosheer
@@ -19,7 +20,12 @@ class WhoosheeQuery(BaseQuery):
         for cd in self.column_descriptions:
             entities.add(cd['type'])
         # joined entities
-        entities.update(set(map(lambda x: x.entity, self._join_entities)))
+        if self._join_entities and isinstance(self._join_entities[0], Mapper):
+            # SQLAlchemy >= 0.8.0
+            entities.update(set(map(lambda x: x.entity, self._join_entities)))
+        else:
+            # SQLAlchemy < 0.8.0
+            entities.update(set(self._join_entities))
 
         whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == entities)
 
