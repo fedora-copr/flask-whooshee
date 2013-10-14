@@ -108,7 +108,7 @@ class Whooshee(object):
             model.query_class = WhoosheeQuery
         return wh
 
-    def register_model(self, *index_fields):
+    def register_model(self, analyzer=None, *index_fields):
         # construct subclass of AbstractWhoosheer for a model
         class ModelWhoosheer(AbstractWhoosheer):
             pass
@@ -125,7 +125,7 @@ class Whooshee(object):
                     primary = field.name
                     schema_attrs[field.name] = whoosh.fields.NUMERIC(stored=True, unique=True)
                 elif field.name in index_fields:
-                    schema_attrs[field.name] = whoosh.fields.TEXT()
+                    schema_attrs[field.name] = whoosh.fields.TEXT(analyzer=analyzer)
             mwh.schema = whoosh.fields.Schema(**schema_attrs)
             # we can't check with isinstance, because ModelWhoosheer is private
             # so use this attribute to find out
