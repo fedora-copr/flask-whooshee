@@ -1,6 +1,7 @@
 import abc
 import os
 import re
+import sys
 
 import whoosh
 import whoosh.fields
@@ -22,7 +23,7 @@ class WhoosheeQuery(BaseQuery):
         # joined entities
         if self._join_entities and isinstance(self._join_entities[0], Mapper):
             # SQLAlchemy >= 0.8.0
-            entities.update(set(map(lambda x: x.entity, self._join_entities)))
+            entities.update(set([x.entity for x in self._join_entities]))
         else:
             # SQLAlchemy < 0.8.0
             entities.update(set(self._join_entities))
@@ -30,7 +31,7 @@ class WhoosheeQuery(BaseQuery):
         whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == entities)
 
         # TODO what if unique field doesn't exist or there are multiple?
-        for fname, field in whoosheer.schema._fields.items():
+        for fname, field in list(whoosheer.schema._fields.items()):
             if field.unique:
                 uniq = fname
 
@@ -57,7 +58,6 @@ class WhoosheeQuery(BaseQuery):
         return self.filter(attr.in_(res))
 
 class AbstractWhoosheer(object):
-    __metaclass__ = abc.ABCMeta
 
     @classmethod
     def search(cls, search_string, values_of='', group=whoosh.qparser.OrGroup, match_substrings=True):
@@ -67,7 +67,7 @@ class AbstractWhoosheer(object):
             query = parser.parse(prepped_string)
             results = searcher.search(query)
             if values_of:
-                return map(lambda x: x[values_of], results)
+                return [x[values_of] for x in results]
             return results
 
     @classmethod
@@ -82,6 +82,8 @@ class AbstractWhoosheer(object):
             s = u'*{0}*'.format(re.sub('[\s]+', '* *', s))
         # TODO: some sanitization
         return s
+
+AbstractWhoosheerMeta = abc.ABCMeta('AbstractWhoosheer', (AbstractWhoosheer,), {})
 
 class Whooshee(object):
     _underscore_re1 = re.compile(r'(.)([A-Z][a-z]+)')
@@ -110,7 +112,7 @@ class Whooshee(object):
 
     def register_model(self, *index_fields, **kw):
         # construct subclass of AbstractWhoosheer for a model
-        class ModelWhoosheer(AbstractWhoosheer):
+        class ModelWhoosheer(AbstractWhoosheerMeta):
             pass
 
         mwh = ModelWhoosheer
@@ -137,7 +139,10 @@ class Whooshee(object):
                 for f in index_fields:
                     attrs[f] = getattr(model, f)
                     if not isinstance(attrs[f], int):
-                        attrs[f] = unicode(attrs[f])
+                        if sys.version < '3':
+                            attrs[f] = unicode(attrs[f])
+                        else:
+                            attrs[f] = str(attrs[f])
                 writer.update_document(**attrs)
 
             @classmethod
@@ -146,7 +151,10 @@ class Whooshee(object):
                 for f in index_fields:
                     attrs[f] = getattr(model, f)
                     if not isinstance(attrs[f], int):
-                        attrs[f] = unicode(attrs[f])
+                        if sys.version < '3':
+                            attrs[f] = unicode(attrs[f])
+                        else:
+                            attrs[f] = str(attrs[f])
                 writer.add_document(**attrs)
 
             setattr(mwh, 'update_{0}'.format(model.__name__.lower()), update_model)
