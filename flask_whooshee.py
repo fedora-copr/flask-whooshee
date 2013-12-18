@@ -12,8 +12,21 @@ from flask.ext.sqlalchemy import models_committed, BaseQuery
 from sqlalchemy.orm.mapper import Mapper
 
 class WhoosheeQuery(BaseQuery):
+    """An override for SQLAlchemy query used to do fulltext search."""
+
     # TODO: add an option to override used Whoosheer
     def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, match_substrings=True):
+        """Do a fulltext search on the query.
+
+        Args:
+            search_string: string to search for
+            group: whoosh group to use for searching, defaults to OrGroup (searches for all
+                   words in all columns)
+            match_substrings: True if you want to match substrings, False otherwise
+
+        Returns:
+            query filtered with results of the fulltext search
+        """
         ### inspiration taken from flask-WhooshAlchemy
         # find out all entities in join
         entities = set()
@@ -58,9 +71,28 @@ class WhoosheeQuery(BaseQuery):
         return self.filter(attr.in_(res))
 
 class AbstractWhoosheer(object):
+    """A superclass for all whoosheers.
+
+    Whoosheer is basically a unit of fulltext search. It represents either of:
+
+    * One table, in which case all given fields of the model is searched.
+    * More tables, in which case all given fields of all the tables are searched.
+    """
 
     @classmethod
     def search(cls, search_string, values_of='', group=whoosh.qparser.OrGroup, match_substrings=True):
+        """Actually searches the fields for given search_string.
+
+        Args:
+            search_string: string to search for
+            values_of: if given, the method will not return the whole records, but only values
+                       of given column (defaults to returning whole records)
+            group: whoosh group to use for searching, defaults to OrGroup (searches for all
+                   words in all columns)
+            match_substrings: True if you want to match substrings, False otherwise
+        Returns:
+            Found records if 'not values_of', else values of given column
+        """
         prepped_string = cls.prep_search_string(search_string, match_substrings)
         with cls.index.searcher() as searcher:
             parser = whoosh.qparser.MultifieldParser(cls.schema.names(), cls.index.schema, group=group)
@@ -72,6 +104,7 @@ class AbstractWhoosheer(object):
 
     @classmethod
     def prep_search_string(cls, search_string, match_substrings):
+        """Prepares search string as a proper whoosh search string."""
         s = search_string.strip()
         # we don't want stars from user
         s = s.replace('*', '')
@@ -86,6 +119,9 @@ class AbstractWhoosheer(object):
 AbstractWhoosheerMeta = abc.ABCMeta('AbstractWhoosheer', (AbstractWhoosheer,), {})
 
 class Whooshee(object):
+    """A top level class that allows to register whoosheers and adds an on_commit hook
+    to SQLAlchemy."""
+
     _underscore_re1 = re.compile(r'(.)([A-Z][a-z]+)')
     _underscore_re2 = re.compile('([a-z0-9])([A-Z])')
     whoosheers = []
@@ -99,6 +135,12 @@ class Whooshee(object):
             os.makedirs(self.index_path_root)
 
     def register_whoosheer(self, wh):
+        """Registers a given whoosheer:
+
+        * Creates and opens an index for it (if it doesn't exist yet)
+        * Sets some default values on it (unless they're already set)
+        * Replaces query class of every whoosheer's model by WhoosheeQuery
+        """
         if not hasattr(wh, 'search_string_min_len'):
             wh.search_string_min_len = self.search_string_min_len
         if not hasattr(wh, 'index_subdir'):
@@ -112,6 +154,9 @@ class Whooshee(object):
         return wh
 
     def register_model(self, *index_fields, **kw):
+        """Registers a single model for fulltext search. This basically creates
+        a simple Whoosheer for the model and calls self.register_whoosheer on it.
+        """
         # construct subclass of AbstractWhoosheer for a model
         class ModelWhoosheer(AbstractWhoosheerMeta):
             pass
@@ -169,6 +214,10 @@ class Whooshee(object):
         return inner
 
     def create_index(self, wh):
+        """Creates and opens index for given whoosheer.
+
+        If the index already exists, it just opens it, otherwise it creates it first.
+        """
         index_path = os.path.join(self.index_path_root, wh.index_subdir)
         if whoosh.index.exists_in(index_path):
             index = whoosh.index.open_dir(index_path)
@@ -179,6 +228,9 @@ class Whooshee(object):
         wh.index = index
 
     def on_commit(self, app, changes):
+        """Method that gets connected to flask.ext.sqlalchemy.models_committed, where it serves
+        to do the actual index writing.
+        """
         for wh in self.__class__.whoosheers:
             writer = wh.index.writer(timeout=self.writer_timeout)
             for change in changes:
@@ -188,4 +240,5 @@ class Whooshee(object):
             writer.commit()
 
     def camel_to_snake(self, s):
+        """Constructs nice dir name from class name, e.g. FooBar => foo_bar."""
         return self._underscore_re2.sub(r'\1_\2', self._underscore_re1.sub(r'\1_\2', s)).lower()
