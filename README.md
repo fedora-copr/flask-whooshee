@@ -41,6 +41,8 @@ from flask.ext.whooshee import Whooshee, AbstractWhoosheer
 
 app = Flask(__name__)
 app.config['WHOOSHEE_DIR'] = /tmp/whoosheers
+# how long should whooshee try to acquire write lock? (defaults to 2)
+app.config['WHOOSHEE_WRITER_TIMEOUT'] = 3
 db = SQLAlchemy(app)
 whooshee = Whooshee(app)
 
