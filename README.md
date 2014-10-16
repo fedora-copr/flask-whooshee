@@ -15,7 +15,7 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.whooshee import Whooshee
 
 app = Flask(__name__)
-app.config['WHOOSHEE_DIR'] = /tmp/whoosheers
+app.config['WHOOSHEE_DIR'] = '/tmp/whoosheers'
 db = SQLAlchemy(app)
 whooshee = Whooshee(app)
 
