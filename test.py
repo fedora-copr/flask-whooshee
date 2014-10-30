@@ -113,4 +113,17 @@ class Tests(TestCase):
         self.assertIn(self.e2, found)
         self.assertIn(self.e4, found)
 
+    def test_more_items(self):
+        expected_count = 20
+        self.entry_list = [
+            self.Entry(title=u'foobar_{}'.format(x), content=u'xxxx', user=self.u1 )
+            for x in range(20)
+        ]
+
+        self.db.session.add_all(self.entry_list)
+        self.db.session.commit()
+
+        found = self.Entry.query.whooshee_search('foobar').all()
+        assert len(found) == expected_count
+
     # TODO: more :)
