@@ -114,16 +114,22 @@ class Tests(TestCase):
         self.assertIn(self.e4, found)
 
     def test_more_items(self):
-        expected_count = 20
-        self.entry_list = [
-            self.Entry(title=u'foobar_{}'.format(x), content=u'xxxx', user=self.u1 )
-            for x in range(20)
-        ]
+        expected_count = 0
+        # couldn't test for large set due to some bugs either in sqlite or whoosh or SA
+        # got: OperationalError: (OperationalError) too many SQL variables u'SELECT entry.id
+        #  ... FROM entry \nWHERE entry.id IN (?, ?, .... when whooshee_search is invoked
+        for batch_size in [2, 5, 7, 20, 50, 300, 500]:  # , 1000]:
+            expected_count += batch_size
+            self.entry_list = [
+                self.Entry(title=u'foobar_{}_{}'.format(expected_count, x),
+                           content=u'xxxx', user=self.u1)
+                for x in range(batch_size)
+            ]
 
-        self.db.session.add_all(self.entry_list)
-        self.db.session.commit()
+            self.db.session.add_all(self.entry_list)
+            self.db.session.commit()
 
-        found = self.Entry.query.whooshee_search('foobar').all()
-        assert len(found) == expected_count
+            found = self.Entry.query.whooshee_search('foobar').all()
+            assert len(found) == expected_count
 
     # TODO: more :)
