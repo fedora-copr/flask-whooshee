@@ -15,7 +15,8 @@ class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
 
     # TODO: add an option to override used Whoosheer
-    def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, match_substrings=True):
+    def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup,
+                        match_substrings=True, limit=None):
         """Do a fulltext search on the query.
 
         Args:
@@ -23,6 +24,7 @@ class WhoosheeQuery(BaseQuery):
             group: whoosh group to use for searching, defaults to OrGroup (searches for all
                    words in all columns)
             match_substrings: True if you want to match substrings, False otherwise
+            limit: number of the top records to be returned, default None returns all records
 
         Returns:
             query filtered with results of the fulltext search
@@ -52,7 +54,8 @@ class WhoosheeQuery(BaseQuery):
         res = whoosheer.search(search_string=search_string,
                                values_of=uniq,
                                group=group,
-                               match_substrings=match_substrings)
+                               match_substrings=match_substrings,
+                               limit=None)
         if not res:
             return self.filter('null')
 
@@ -80,7 +83,7 @@ class AbstractWhoosheer(object):
     """
 
     @classmethod
-    def search(cls, search_string, values_of='', group=whoosh.qparser.OrGroup, match_substrings=True):
+    def search(cls, search_string, values_of='', group=whoosh.qparser.OrGroup, match_substrings=True, limit=None):
         """Actually searches the fields for given search_string.
 
         Args:
@@ -90,6 +93,8 @@ class AbstractWhoosheer(object):
             group: whoosh group to use for searching, defaults to OrGroup (searches for all
                    words in all columns)
             match_substrings: True if you want to match substrings, False otherwise
+            limit: number of the top records to be returned, default None returns all records
+
         Returns:
             Found records if 'not values_of', else values of given column
         """
@@ -97,7 +102,7 @@ class AbstractWhoosheer(object):
         with cls.index.searcher() as searcher:
             parser = whoosh.qparser.MultifieldParser(cls.schema.names(), cls.index.schema, group=group)
             query = parser.parse(prepped_string)
-            results = searcher.search(query)
+            results = searcher.search(query, limit=limit)
             if values_of:
                 return [x[values_of] for x in results]
             return results
