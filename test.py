@@ -100,8 +100,9 @@ class Tests(TestCase):
 
         found = self.Entry.query.whooshee_search('chuck').all()
         self.assertEqual(len(found), 2)
-        self.assertIn(self.e1, found)
-        self.assertIn(self.e4, found)
+        # there is no assertIn in Python 2.6
+        self.assertTrue(self.e1 in found)
+        self.assertTrue(self.e4 in found)
 
     def test_cw_result_in_different_tables(self):
         self.db.session.add_all(self.all_inst)
@@ -109,9 +110,9 @@ class Tests(TestCase):
 
         found = self.Entry.query.join(self.User).whooshee_search('chuck').all()
         self.assertEqual(len(found), 3)
-        self.assertIn(self.e1, found)
-        self.assertIn(self.e2, found)
-        self.assertIn(self.e4, found)
+        self.assertTrue(self.e1 in found)
+        self.assertTrue(self.e2 in found)
+        self.assertTrue(self.e4 in found)
 
     def test_more_items(self):
         expected_count = 0
@@ -121,7 +122,7 @@ class Tests(TestCase):
         for batch_size in [2, 5, 7, 20, 50, 300, 500]:  # , 1000]:
             expected_count += batch_size
             self.entry_list = [
-                self.Entry(title=u'foobar_{}_{}'.format(expected_count, x),
+                self.Entry(title=u'foobar_{0}_{1}'.format(expected_count, x),
                            content=u'xxxx', user=self.u1)
                 for x in range(batch_size)
             ]
