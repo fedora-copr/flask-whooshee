@@ -9,128 +9,152 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask_whooshee import AbstractWhoosheer, Whooshee
 
 
-class Tests(TestCase):
-    def setUp(self):
-        self.app = Flask(__name__)
-        self.app.config['WHOOSHEE_DIR'] = tempfile.mkdtemp()
-        self.app.config['DATABASE_URL'] = 'sqlite:///:memory:'
-        self.app.config['TESTING'] = True
-        self.db = SQLAlchemy(self.app)
-        self.wh = Whooshee(self.app)
+class BaseTestCases(object):
 
-        class User(self.db.Model):
-            id = self.db.Column(self.db.Integer, primary_key=True)
-            name = self.db.Column(self.db.String)
+    class BaseTest(TestCase):
 
-        # separate index for just entry
-        @self.wh.register_model('title', 'content')
-        class Entry(self.db.Model):
-            id = self.db.Column(self.db.Integer, primary_key=True)
-            title = self.db.Column(self.db.String)
-            content = self.db.Column(self.db.Text)
-            user = self.db.relationship(User, backref = self.db.backref('entries'))
-            user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
+        def __init__(self, *args, **kwargs):
+            super(BaseTestCases.BaseTest, self).__init__(*args, **kwargs)
+            self.app = Flask(__name__)
 
-        # index for both entry and user
-        @self.wh.register_whoosheer
-        class EntryUserWhoosheer(AbstractWhoosheer):
-            schema = whoosh.fields.Schema(
-                entry_id = whoosh.fields.NUMERIC(stored=True, unique=True),
-                user_id = whoosh.fields.NUMERIC(stored=True),
-                username = whoosh.fields.TEXT(),
-                title = whoosh.fields.TEXT(),
-                content = whoosh.fields.TEXT())
+            self.app.config['WHOOSHEE_DIR'] = tempfile.mkdtemp()
+            self.app.config['DATABASE_URL'] = 'sqlite:///:memory:'
+            self.app.config['TESTING'] = True
 
-            models = [Entry, User]
+            self.db = SQLAlchemy(self.app)
 
-            @classmethod
-            def update_user(cls, writer, user):
-                pass # TODO: update all users entries 
+        def setUp(self):
 
-            @classmethod
-            def update_entry(cls, writer, entry):
-                writer.update_document(entry_id=entry.id,
-                                       user_id=entry.user.id,
-                                       username=entry.user.name,
-                                       title=entry.title,
-                                       content=entry.content)
+            class User(self.db.Model):
+                id = self.db.Column(self.db.Integer, primary_key=True)
+                name = self.db.Column(self.db.String)
 
-            @classmethod
-            def insert_user(cls, writer, user):
-                # nothing, user doesn't have entries yet
-                pass
+            # separate index for just entry
+            @self.wh.register_model('title', 'content')
+            class Entry(self.db.Model):
+                id = self.db.Column(self.db.Integer, primary_key=True)
+                title = self.db.Column(self.db.String)
+                content = self.db.Column(self.db.Text)
+                user = self.db.relationship(User, backref = self.db.backref('entries'))
+                user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
 
-            @classmethod
-            def insert_entry(cls, writer, entry):
-                writer.add_document(entry_id=entry.id,
-                                    user_id=entry.user.id,
-                                    username=entry.user.name,
-                                    title=entry.title,
-                                    content=entry.content)
+            # index for both entry and user
+            @self.wh.register_whoosheer
+            class EntryUserWhoosheer(AbstractWhoosheer):
+                schema = whoosh.fields.Schema(
+                    entry_id = whoosh.fields.NUMERIC(stored=True, unique=True),
+                    user_id = whoosh.fields.NUMERIC(stored=True),
+                    username = whoosh.fields.TEXT(),
+                    title = whoosh.fields.TEXT(),
+                    content = whoosh.fields.TEXT())
 
-        self.User = User
-        self.Entry = Entry
-        self.EntryUserWhoosheer = EntryUserWhoosheer
+                models = [Entry, User]
 
-        self.db.create_all()
+                @classmethod
+                def update_user(cls, writer, user):
+                    pass # TODO: update all users entries
 
-        self.u1 = User(name=u'chuck')
-        self.u2 = User(name=u'arnold')
-        self.u3 = User(name=u'silvester')
+                @classmethod
+                def update_entry(cls, writer, entry):
+                    writer.update_document(entry_id=entry.id,
+                                           user_id=entry.user.id,
+                                           username=entry.user.name,
+                                           title=entry.title,
+                                           content=entry.content)
 
-        self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
-        self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
-        self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
-        self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
+                @classmethod
+                def insert_user(cls, writer, user):
+                    # nothing, user doesn't have entries yet
+                    pass
 
-        self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
+                @classmethod
+                def insert_entry(cls, writer, entry):
+                    writer.add_document(entry_id=entry.id,
+                                        user_id=entry.user.id,
+                                        username=entry.user.name,
+                                        title=entry.title,
+                                        content=entry.content)
 
-    def tearDown(self):
-        shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
-        Whooshee.whoosheers = []
-        self.db.drop_all()
+            self.User = User
+            self.Entry = Entry
+            self.EntryUserWhoosheer = EntryUserWhoosheer
 
-    # tests testing model whoosheers should have mw in their name, for custom whoosheers it's cw
-    # ideally, there should be a separate class for model whoosheer and custom whoosheer
-    # but we also want to test how they coexist
+            self.db.create_all()
 
-    def test_mw_result_in_different_fields(self):
-        self.db.session.add_all(self.all_inst)
-        self.db.session.commit()
+            self.u1 = User(name=u'chuck')
+            self.u2 = User(name=u'arnold')
+            self.u3 = User(name=u'silvester')
 
-        found = self.Entry.query.whooshee_search('chuck').all()
-        self.assertEqual(len(found), 2)
-        # there is no assertIn in Python 2.6
-        self.assertTrue(self.e1 in found)
-        self.assertTrue(self.e4 in found)
+            self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
+            self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
+            self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
+            self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
 
-    def test_cw_result_in_different_tables(self):
-        self.db.session.add_all(self.all_inst)
-        self.db.session.commit()
+            self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
 
-        found = self.Entry.query.join(self.User).whooshee_search('chuck').all()
-        self.assertEqual(len(found), 3)
-        self.assertTrue(self.e1 in found)
-        self.assertTrue(self.e2 in found)
-        self.assertTrue(self.e4 in found)
+        def tearDown(self):
+            shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
+            Whooshee.whoosheers = []
+            self.db.drop_all()
 
-    def test_more_items(self):
-        expected_count = 0
-        # couldn't test for large set due to some bugs either in sqlite or whoosh or SA
-        # got: OperationalError: (OperationalError) too many SQL variables u'SELECT entry.id
-        #  ... FROM entry \nWHERE entry.id IN (?, ?, .... when whooshee_search is invoked
-        for batch_size in [2, 5, 7, 20, 50, 300, 500]:  # , 1000]:
-            expected_count += batch_size
-            self.entry_list = [
-                self.Entry(title=u'foobar_{0}_{1}'.format(expected_count, x),
-                           content=u'xxxx', user=self.u1)
-                for x in range(batch_size)
-            ]
+        # tests testing model whoosheers should have mw in their name, for custom whoosheers it's cw
+        # ideally, there should be a separate class for model whoosheer and custom whoosheer
+        # but we also want to test how they coexist
 
-            self.db.session.add_all(self.entry_list)
+        def test_mw_result_in_different_fields(self):
+            self.db.session.add_all(self.all_inst)
             self.db.session.commit()
 
-            found = self.Entry.query.whooshee_search('foobar').all()
-            assert len(found) == expected_count
+            found = self.Entry.query.whooshee_search('chuck').all()
+            self.assertEqual(len(found), 2)
+            # there is no assertIn in Python 2.6
+            self.assertTrue(self.e1 in found)
+            self.assertTrue(self.e4 in found)
 
-    # TODO: more :)
+        def test_cw_result_in_different_tables(self):
+            self.db.session.add_all(self.all_inst)
+            self.db.session.commit()
+
+            found = self.Entry.query.join(self.User).whooshee_search('chuck').all()
+            self.assertEqual(len(found), 3)
+            self.assertTrue(self.e1 in found)
+            self.assertTrue(self.e2 in found)
+            self.assertTrue(self.e4 in found)
+
+        def test_more_items(self):
+            expected_count = 0
+            # couldn't test for large set due to some bugs either in sqlite or whoosh or SA
+            # got: OperationalError: (OperationalError) too many SQL variables u'SELECT entry.id
+            #  ... FROM entry \nWHERE entry.id IN (?, ?, .... when whooshee_search is invoked
+            for batch_size in [2, 5, 7, 20, 50, 300, 500]:  # , 1000]:
+                expected_count += batch_size
+                self.entry_list = [
+                    self.Entry(title=u'foobar_{0}_{1}'.format(expected_count, x),
+                               content=u'xxxx', user=self.u1)
+                    for x in range(batch_size)
+                ]
+
+                self.db.session.add_all(self.entry_list)
+                self.db.session.commit()
+
+                found = self.Entry.query.whooshee_search('foobar').all()
+                assert len(found) == expected_count
+
+        # TODO: more :)
+
+class TestsWithApp(BaseTestCases.BaseTest):
+
+    def setUp(self):
+
+        self.wh = Whooshee(self.app)
+
+        super(TestsWithApp, self).setUp()
+
+class TestsWithInitApp(BaseTestCases.BaseTest):
+
+    def setUp(self):
+
+        self.wh = Whooshee()
+        self.wh.init_app(self.app)
+
+        super(TestsWithInitApp, self).setUp()
