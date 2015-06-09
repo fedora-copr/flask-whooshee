@@ -55,7 +55,7 @@ class WhoosheeQuery(BaseQuery):
                                values_of=uniq,
                                group=group,
                                match_substrings=match_substrings,
-                               limit=None)
+                               limit=limit)
         if not res:
             return self.filter('null')
 
