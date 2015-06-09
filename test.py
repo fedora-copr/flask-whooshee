@@ -86,7 +86,7 @@ class Tests(TestCase):
         self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
 
     def tearDown(self):
-        shutil.rmtree(self.app.config['WHOOSHEE_DIR'])
+        shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
         Whooshee.whoosheers = []
         self.db.drop_all()
 
