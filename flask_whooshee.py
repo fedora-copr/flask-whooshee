@@ -131,7 +131,13 @@ class Whooshee(object):
     _underscore_re2 = re.compile('([a-z0-9])([A-Z])')
     whoosheers = []
 
-    def __init__(self, app):
+    def __init__(self, app=None):
+
+        if app:
+            self.init_app(app)
+
+    def init_app(self, app):
+
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
         self.search_string_min_len = app.config.get('WHOSHEE_MIN_STRING_LEN', 3)
         self.writer_timeout = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
