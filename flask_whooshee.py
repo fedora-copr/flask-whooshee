@@ -9,6 +9,7 @@ import whoosh.index
 import whoosh.qparser
 
 from flask.ext.sqlalchemy import models_committed, BaseQuery
+from sqlalchemy import text
 from sqlalchemy.orm.mapper import Mapper
 
 class WhoosheeQuery(BaseQuery):
@@ -57,7 +58,7 @@ class WhoosheeQuery(BaseQuery):
                                match_substrings=match_substrings,
                                limit=limit)
         if not res:
-            return self.filter('null')
+            return self.filter(text('null'))
 
         # transform unique field name into model attribute field
         attr = None

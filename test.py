@@ -101,6 +101,10 @@ class BaseTestCases(object):
         # ideally, there should be a separate class for model whoosheer and custom whoosheer
         # but we also want to test how they coexist
 
+        def test_nothing_found(self):
+            found = self.Entry.query.whooshee_search('not there!').all()
+            self.assertEqual(len(found), 0)
+
         def test_mw_result_in_different_fields(self):
             self.db.session.add_all(self.all_inst)
             self.db.session.commit()
