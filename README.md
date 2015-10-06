@@ -108,6 +108,19 @@ Now you can search join queries like this:
 Entry.query.join(User).whooshee_search('chuck norris').order_by(Entry.id.desc()).all()
 ```
 
+### Reindex
+
+Available since v0.0.9.
+
+If you lost your whooshee data and you need to recreate it, you can run inside Flask application context:
+
+```
+from flask.ext.whooshee import Whooshee
+w = Whooshee(app)
+w.reindex()
+```
+
+
 Project is in early alpha stage, documentation and more functionality will be landing soon.
 
 Licensed under GPLv2+

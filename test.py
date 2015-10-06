@@ -144,6 +144,20 @@ class BaseTestCases(object):
                 found = self.Entry.query.whooshee_search('foobar').all()
                 assert len(found) == expected_count
 
+        def test_reindex(self):
+            self.db.session.add_all(self.all_inst)
+            self.db.session.commit()
+            # generall reindex
+            self.wh.reindex()
+            # put stallone directly in db and find him only after reindex
+            result = self.db.session.execute("INSERT INTO entry VALUES (100, 'rambo', 'pack of one two and three', {0})".format(self.u3.id))
+            self.db.session.commit()
+            found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
+            self.assertEqual(len(found), 0)
+            self.wh.reindex()
+            found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
+            self.assertEqual(len(found), 1)
+
         # TODO: more :)
 
 class TestsWithApp(BaseTestCases.BaseTest):

@@ -254,3 +254,17 @@ class Whooshee(object):
     def camel_to_snake(self, s):
         """Constructs nice dir name from class name, e.g. FooBar => foo_bar."""
         return self._underscore_re2.sub(r'\1_\2', self._underscore_re1.sub(r'\1_\2', s)).lower()
+
+    def reindex(self):
+        """ Reindex all data
+
+        This method retrieve all data from registered models and call
+        update_<model>() function for every instance of such model.
+        """
+        for wh in self.__class__.whoosheers:
+            writer = wh.index.writer(timeout=self.writer_timeout)
+            for model in wh.models:
+                method_name = "update_{0}".format(model.__name__.lower())
+                for item in model.query.all():
+                    getattr(wh, method_name)(writer, item)
+            writer.commit()
