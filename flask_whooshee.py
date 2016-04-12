@@ -3,6 +3,8 @@ import os
 import re
 import sys
 
+import sqlalchemy
+
 import whoosh
 import whoosh.fields
 import whoosh.index
@@ -72,7 +74,11 @@ class WhoosheeQuery(BaseQuery):
                 if m.__name__.lower() == uniq.split('_')[0]:
                     attr = getattr(m, uniq.split('_')[1])
 
-        return self.filter(attr.in_(res))
+        order_by_expr = sqlalchemy.sql.expression.case(
+            [(attr == uniq_val, index) for index, uniq_val in enumerate(res)]
+        )
+
+        return self.filter(attr.in_(res)).order_by(order_by_expr)
 
 class AbstractWhoosheer(object):
     """A superclass for all whoosheers.
