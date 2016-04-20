@@ -19,7 +19,7 @@ class WhoosheeQuery(BaseQuery):
 
     # TODO: add an option to override used Whoosheer
     def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup,
-                        match_substrings=True, limit=None):
+                        match_substrings=True, limit=None, order_by_relevance=-1):
         """Do a fulltext search on the query.
 
         Args:
@@ -74,12 +74,21 @@ class WhoosheeQuery(BaseQuery):
                 if m.__name__.lower() == uniq.split('_')[0]:
                     attr = getattr(m, uniq.split('_')[1])
 
-        order_by_expr = sqlalchemy.sql.expression.case( # return first few rows in order
-            [(attr == uniq_val, index) for index, uniq_val in enumerate(res) if index < 10],
-            else_=10
-        )
+        search_query = self.filter(attr.in_(res))
 
-        return self.filter(attr.in_(res)).order_by(order_by_expr)
+        if order_by_relevance < 0: # we want all returned rows ordered
+            search_query = search_query.order_by(sqlalchemy.sql.expression.case(
+                [(attr == uniq_val, index) for index, uniq_val in enumerate(res)],
+            ))
+        elif order_by_relevance > 0: # we want only number of specified rows ordered
+            search_query = search_query.order_by(sqlalchemy.sql.expression.case(
+                [(attr == uniq_val, index) for index, uniq_val in enumerate(res) if index < order_by_relevance],
+                else_=order_by_relevance
+            ))
+        else: # no ordering
+            pass
+
+        return search_query
 
 class AbstractWhoosheer(object):
     """A superclass for all whoosheers.
