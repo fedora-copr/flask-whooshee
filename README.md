@@ -119,6 +119,22 @@ from flask.ext.whooshee import Whooshee
 w = Whooshee(app)
 w.reindex()
 ```
+### Seach results ordering
+
+By default only first 10 (for optimization reasons) search results are sorted by relevance.
+You can modify this behaviour by explicitly setting the value of `order_by_relevance`
+parameter of the `whooshee_search` method.
+
+```
+# return all search results sorted by relevance (only Chuck Norris can do this)
+Entry.query.join(User).whooshee_search('chuck norris', order_by_relevance=-1).all()
+
+# disable sorting altogether
+Entry.query.join(User).whooshee_search('chuck norris', order_by_relevance=0).all()
+
+# return first 25 rows sorted by their relevance
+Entry.query.join(User).whooshee_search('chuck norris', order_by_relevance=25).all()
+```
 
 
 Project is in early alpha stage, documentation and more functionality will be landing soon.
