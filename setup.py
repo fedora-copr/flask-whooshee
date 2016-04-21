@@ -9,7 +9,7 @@ except:
 
 setup(
     name = 'flask-whooshee',
-    version = '0.0.9',
+    version = '0.1.0',
     description = 'Flask - SQLAlchemy - Whoosh integration',
     long_description = 'Flask - SQLAlchemy - Whoosh integration that allows to create and search custom indexes.',
     keywords = 'flask, sqlalchemy, whoosh',
@@ -20,7 +20,7 @@ setup(
     py_modules = ['flask_whooshee', ],
     install_requires = open('requirements.txt').read().splitlines(),
     setup_requires = [],
-    classifiers = ['Development Status :: 3 - Alpha',
+    classifiers = ['Development Status :: 4 - Beta',
                    'Environment :: Web Environment',
                    'Intended Audience :: Developers',
                    'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
