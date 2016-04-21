@@ -179,6 +179,16 @@ class BaseTestCases(object):
             titles = [int(entry.title) for entry in found_entries]
             self.assertEqual(titles, sorted(titles, reverse=True))
 
+            # order_by after whooshee_search (note: order_by following whooshee_search has no impact for the first n results)
+            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=26).order_by(self.Entry.id).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertEqual(titles, sorted(titles, reverse=True))
+
+            # order_by before whooshee_search (note: order_by is a primary criterion here and search ordering is secondary)
+            found_entries = self.Entry.query.order_by(self.Entry.id).whooshee_search(search_string, order_by_relevance=26).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertEqual(titles, sorted(titles))
+
         def test_reindex(self):
             self.db.session.add_all(self.all_inst)
             self.db.session.commit()
