@@ -159,7 +159,7 @@ class BaseTestCases(object):
 
             search_string = u' '.join([string.ascii_lowercase[i]*3 for i in range(26)])
 
-            # no sorting (this assumes (hopes) rows won't returned in the correct order by default)
+            # no sorting (this assumes (hopes) rows won't be returned in the correct order by default)
             found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=0).all()
             titles = [int(entry.title) for entry in found_entries]
             self.assertNotEqual(titles, sorted(titles, reverse=True))
@@ -169,7 +169,7 @@ class BaseTestCases(object):
             titles = [int(entry.title) for entry in found_entries]
             self.assertEqual(titles, sorted(titles, reverse=True))
 
-            # sort some (this assumes (hopes) the rest of the rows won't returned in the correct order by default)
+            # sort some (this assumes (hopes) the rest of the rows won't be returned in the correct order by default)
             found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=20).all()
             titles = [int(entry.title) for entry in found_entries]
             self.assertNotEqual(titles, sorted(titles, reverse=True))

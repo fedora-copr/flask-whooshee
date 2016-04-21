@@ -19,7 +19,7 @@ class WhoosheeQuery(BaseQuery):
 
     # TODO: add an option to override used Whoosheer
     def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup,
-                        match_substrings=True, limit=None, order_by_relevance=-1):
+                        match_substrings=True, limit=None, order_by_relevance=10):
         """Do a fulltext search on the query.
 
         Args:
