@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from unittest import TestCase
+import string
 
 import whoosh
 from flask import Flask
@@ -130,6 +131,8 @@ class BaseTestCases(object):
             # couldn't test for large set due to some bugs either in sqlite or whoosh or SA
             # got: OperationalError: (OperationalError) too many SQL variables u'SELECT entry.id
             #  ... FROM entry \nWHERE entry.id IN (?, ?, .... when whooshee_search is invoked
+            #
+            # NOTE: This is caused by sqlite db paramater SQLITE_LIMIT_VARIABLE_NUMBER being set to 999 by default
             for batch_size in [2, 5, 7, 20, 50, 300, 500]:  # , 1000]:
                 expected_count += batch_size
                 self.entry_list = [
@@ -141,8 +144,50 @@ class BaseTestCases(object):
                 self.db.session.add_all(self.entry_list)
                 self.db.session.commit()
 
-                found = self.Entry.query.whooshee_search('foobar').all()
+                found = self.Entry.query.whooshee_search('foobar', order_by_relevance=0).all()
                 assert len(found) == expected_count
+
+        def test_order_by_relevance(self):
+            entries_to_add = []
+
+            for x in range(1, len(string.ascii_lowercase)+1):
+                content = u' '.join([string.ascii_lowercase[i]*3 for i in range(x)])
+                entries_to_add.append(self.Entry(title=u'{0}'.format(x), content=content, user=self.u1))
+
+            self.db.session.add_all(entries_to_add)
+            self.db.session.commit()
+
+            search_string = u' '.join([string.ascii_lowercase[i]*3 for i in range(26)])
+
+            # no sorting (this assumes (hopes) rows won't be returned in the correct order by default)
+            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=0).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertNotEqual(titles, sorted(titles, reverse=True))
+
+            # sort all
+            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=-1).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertEqual(titles, sorted(titles, reverse=True))
+
+            # sort some (this assumes (hopes) the rest of the rows won't be returned in the correct order by default)
+            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=20).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertNotEqual(titles, sorted(titles, reverse=True))
+
+            # sort all (by setting order_by_relevance to the number of returned search results)
+            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=26).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertEqual(titles, sorted(titles, reverse=True))
+
+            # order_by after whooshee_search (note: order_by following whooshee_search has no impact for the first n results)
+            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=26).order_by(self.Entry.id).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertEqual(titles, sorted(titles, reverse=True))
+
+            # order_by before whooshee_search (note: order_by is a primary criterion here and search ordering is secondary)
+            found_entries = self.Entry.query.order_by(self.Entry.id).whooshee_search(search_string, order_by_relevance=26).all()
+            titles = [int(entry.title) for entry in found_entries]
+            self.assertEqual(titles, sorted(titles))
 
         def test_reindex(self):
             self.db.session.add_all(self.all_inst)
