@@ -17,8 +17,7 @@ from sqlalchemy.orm.mapper import Mapper
 class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
 
-    # TODO: add an option to override used Whoosheer
-    def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup,
+    def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, whoosheer=None,
                         match_substrings=True, limit=None, order_by_relevance=10):
         """Do a fulltext search on the query.
 
@@ -32,21 +31,22 @@ class WhoosheeQuery(BaseQuery):
         Returns:
             query filtered with results of the fulltext search
         """
-        ### inspiration taken from flask-WhooshAlchemy
-        # find out all entities in join
-        entities = set()
-        # directly queried entities
-        for cd in self.column_descriptions:
-            entities.add(cd['type'])
-        # joined entities
-        if self._join_entities and isinstance(self._join_entities[0], Mapper):
-            # SQLAlchemy >= 0.8.0
-            entities.update(set([x.entity for x in self._join_entities]))
-        else:
-            # SQLAlchemy < 0.8.0
-            entities.update(set(self._join_entities))
+        if not whoosheer:
+            ### inspiration taken from flask-WhooshAlchemy
+            # find out all entities in join
+            entities = set()
+            # directly queried entities
+            for cd in self.column_descriptions:
+                entities.add(cd['type'])
+            # joined entities
+            if self._join_entities and isinstance(self._join_entities[0], Mapper):
+                # SQLAlchemy >= 0.8.0
+                entities.update(set([x.entity for x in self._join_entities]))
+            else:
+                # SQLAlchemy < 0.8.0
+                entities.update(set(self._join_entities))
 
-        whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == entities)
+            whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == entities)
 
         # TODO what if unique field doesn't exist or there are multiple?
         for fname, field in list(whoosheer.schema._fields.items()):

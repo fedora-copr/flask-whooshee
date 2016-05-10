@@ -76,6 +76,7 @@ class BaseTestCases(object):
                                         title=entry.title,
                                         content=entry.content)
 
+
             self.User = User
             self.Entry = Entry
             self.EntryUserWhoosheer = EntryUserWhoosheer
@@ -188,6 +189,35 @@ class BaseTestCases(object):
             found_entries = self.Entry.query.order_by(self.Entry.id).whooshee_search(search_string, order_by_relevance=26).all()
             titles = [int(entry.title) for entry in found_entries]
             self.assertEqual(titles, sorted(titles))
+
+        def test_whoosheer_search_option(self):
+
+            # alternative whoosheer
+            @self.wh.register_whoosheer
+            class EntryWhoosheer(AbstractWhoosheer):
+                schema = whoosh.fields.Schema(
+                    entry_id = whoosh.fields.NUMERIC(stored=True, unique=True),
+                    title = whoosh.fields.TEXT()
+                )
+
+                models = [self.Entry]
+
+                @classmethod
+                def update_entry(cls, writer, entry):
+                    writer.update_document(entry_id=entry.id, title=entry.title+'cookie')
+
+                @classmethod
+                def insert_entry(cls, writer, entry):
+                    writer.add_document(entry_id=entry.id, title=entry.title+'cookie')
+
+            entry = self.Entry(title=u'secret_', content=u'blah blah blah', user=self.u1)
+            self.db.session.add(entry)
+            self.db.session.commit()
+
+            found = self.Entry.query.join(self.User).whooshee_search('secret_cookie').all()
+            self.assertEqual(len(found), 0)
+            found = self.Entry.query.join(self.User).whooshee_search('secret_cookie', whoosheer=EntryWhoosheer).all()
+            self.assertEqual(len(found), 1)
 
         def test_reindex(self):
             self.db.session.add_all(self.all_inst)
