@@ -108,6 +108,16 @@ Now you can search join queries like this:
 Entry.query.join(User).whooshee_search('chuck norris').order_by(Entry.id.desc()).all()
 ```
 
+The whoosheer that is used for searching is, by default, selected based on the models participating in the query.
+This set of models is compared against the value of `models` attribute of each registered whoosheer and the one
+with an exact match is selected. You can override this behaviour by explicitly passing whoosheer that should be
+used for searching to the `whooshee_search` method. This is useful if you don't want to join on all the models that
+form the search index. For example:
+```python
+Entry.query.whooshee_search('chuck norris', whoosheer=EntryUserWhoosheer).order_by(Entry.id.desc()).all()
+```
+If there exists an entry of a user called 'chuck norris', this entry will be found because the custom whoosheer, that contains field `username`, will be used. But without the whoosheer option, that entry won't be found (unless it has 'chuck&nbsp;norris' in content or title) because the model whoosheer will be used.
+
 ### Reindex
 
 Available since v0.0.9.
