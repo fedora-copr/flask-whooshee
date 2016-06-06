@@ -233,15 +233,7 @@ class Whooshee(object):
 
             @classmethod
             def delete_model(cls, writer, model):
-                attrs = {primary: getattr(model, primary)}
-                for f in index_fields:
-                    attrs[f] = getattr(model, f)
-                    if not isinstance(attrs[f], int):
-                        if sys.version < '3':
-                            attrs[f] = unicode(attrs[f])
-                        else:
-                            attrs[f] = str(attrs[f])
-                writer.delete_by_query(**attrs)
+                writer.delete_by_term(primary, getattr(model, primary))
 
             setattr(mwh, 'update_{0}'.format(model.__name__.lower()), update_model)
             setattr(mwh, 'insert_{0}'.format(model.__name__.lower()), insert_model)
