@@ -78,7 +78,7 @@ class EntryUserWhoosheer(AbstractWhoosheer):
     # if you have camel case names like FooBar, just lowercase them: insert_foobar, update_foobar
     @classmethod
     def update_user(cls, writer, user):
-        pass # TODO: update all users entries 
+        pass # TODO: update all users entries
 
     @classmethod
     def update_entry(cls, writer, entry):
@@ -100,6 +100,15 @@ class EntryUserWhoosheer(AbstractWhoosheer):
                             username=entry.user.name,
                             title=entry.title,
                             content=entry.content)
+
+    @classmethod
+    def delete_user(cls, writer, user):
+        # nothing, user doesn't have entries yet
+        pass
+
+    @classmethod
+    def delete_entry(cls, writer, entry):
+        writer.delete_by_term('entry_id', entry.id)
 ```
 
 Now you can search join queries like this:
