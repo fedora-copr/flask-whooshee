@@ -11,7 +11,7 @@ setup(
     name='flask-whooshee',
     version='0.2.1',
     description='Flask - SQLAlchemy - Whoosh integration',
-    long_description='Flask - SQLAlchemy - Whoosh integration that allows to create and search custom indexes.',
+    long_description=''.join(open('README.md').readlines()),
     keywords='flask, sqlalchemy, whoosh',
     author='Bohuslav "Slavek" Kabrda',
     author_email='bkabrda@redhat.com',
