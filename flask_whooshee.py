@@ -231,8 +231,13 @@ class Whooshee(object):
                             attrs[f] = str(attrs[f])
                 writer.add_document(**attrs)
 
+            @classmethod
+            def delete_model(cls, writer, model):
+                writer.delete_by_term(primary, getattr(model, primary))
+
             setattr(mwh, 'update_{0}'.format(model.__name__.lower()), update_model)
             setattr(mwh, 'insert_{0}'.format(model.__name__.lower()), insert_model)
+            setattr(mwh, 'delete_{0}'.format(model.__name__.lower()), delete_model)
 
             model._whoosheer_ = mwh
             model.whoosh_search = mwh.search

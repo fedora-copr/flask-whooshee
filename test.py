@@ -76,6 +76,14 @@ class BaseTestCases(object):
                                         title=entry.title,
                                         content=entry.content)
 
+                @classmethod
+                def delete_user(cls, writer, user):
+                    # nothing, user doesn't have entries yet
+                    pass
+
+                @classmethod
+                def delete_entry(cls, writer, entry):
+                    writer.delete_by_term('entry_id', entry.id)
 
             self.User = User
             self.Entry = Entry
@@ -232,6 +240,50 @@ class BaseTestCases(object):
             self.wh.reindex()
             found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
             self.assertEqual(len(found), 1)
+
+        def test_add(self):
+            # test that the add operation works
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 0)
+
+            self.db.session.add(self.e1)
+            self.db.session.commit()
+
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 1)
+
+        # def test_update(self):
+        #     # test that the update operation works
+        #     self.db.session.add(self.e1)
+        #     self.db.session.commit()
+        #     self.db.session.remove()
+        #
+        #     found = self.Entry.query.whooshee_search('blah blah blah').all()
+        #     self.assertEqual(len(found), 1)
+        #
+        #     # TODO there is an error here "InvalidRequestError: This session is in 'committed' state; no further SQL can be emitted within this transaction."
+        #     self.e1.content = 'ramble ramble ramble'
+        #     self.db.session.commit()
+        #
+        #     found = self.Entry.query.whooshee_search('ramble ramble ramble').all()
+        #     self.assertEqual(len(found), 1)
+        #
+        #     found = self.Entry.query.whooshee_search('blah blah blah').all()
+        #     self.assertEqual(len(found), 0)
+
+        def test_delete(self):
+            # test that the delete operation works
+            self.db.session.add(self.e1)
+            self.db.session.commit()
+
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 1)
+
+            self.db.session.delete(self.e1)
+            self.db.session.flush()
+
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 0)
 
         # TODO: more :)
 
