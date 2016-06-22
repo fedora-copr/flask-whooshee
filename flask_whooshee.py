@@ -265,12 +265,17 @@ class Whooshee(object):
         to do the actual index writing.
         """
         for wh in self.__class__.whoosheers:
-            writer = wh.index.writer(timeout=self.writer_timeout)
+            writer = None
             for change in changes:
                 if change[0].__class__ in wh.models:
                     method_name = '{0}_{1}'.format(change[1], change[0].__class__.__name__.lower())
-                    getattr(wh, method_name)(writer, change[0])
-            writer.commit()
+                    method = getattr(wh, method_name, None)
+                    if method:
+                        if not writer:
+                            writer = wh.index.writer(timeout=self.writer_timeout)
+                        method(writer, change[0])
+            if writer:
+                writer.commit()
 
     def camel_to_snake(self, s):
         """Constructs nice dir name from class name, e.g. FooBar => foo_bar."""
