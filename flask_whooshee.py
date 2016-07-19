@@ -128,6 +128,8 @@ class AbstractWhoosheer(object):
       searched.
     """
 
+    auto_update = True
+
     @classmethod
     def search(cls, search_string, values_of='', group=whoosh.qparser.OrGroup, match_substrings=True, limit=None):
         """Searches the fields for given search_string.
@@ -395,6 +397,8 @@ class Whooshee(object):
         to do the actual index writing.
         """
         for wh in self.whoosheers:
+            if not wh.auto_update:
+                continue
             writer = None
             for change in changes:
                 if change[0].__class__ in wh.models:

@@ -117,6 +117,23 @@ class BaseTestCases(object):
             found = self.Entry.query.whooshee_search('not there!').all()
             self.assertEqual(len(found), 0)
 
+        def test_no_autoupdate(self):
+            for whoosheer in self.wh.whoosheers:
+                whoosheer.auto_update = False
+            self.db.session.add(self.u1)
+            self.db.session.commit()
+
+            found = self.Entry.query.whooshee_search('chuck').all()
+            self.assertEqual(len(found), 0) # nothing is found
+
+            for whoosheer in self.wh.whoosheers:
+                whoosheer.auto_update = True
+            self.db.session.add(self.u2)
+            self.db.session.commit()
+
+            found = self.Entry.query.whooshee_search('arnold').all()
+            self.assertEqual(len(found), 1) # arnold is found
+
         def test_mw_result_in_different_fields(self):
             self.db.session.add_all(self.all_inst)
             self.db.session.commit()
