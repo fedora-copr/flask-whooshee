@@ -127,6 +127,16 @@ Entry.query.whooshee_search('chuck norris', whoosheer=EntryUserWhoosheer).order_
 ```
 If there exists an entry of a user called 'chuck norris', this entry will be found because the custom whoosheer, that contains field `username`, will be used. But without the whoosheer option, that entry won't be found (unless it has 'chuck&nbsp;norris' in content or title) because the model whoosheer will be used.
 
+### Configuration
+
+Following configuration options are available:
+
+| Option                      | Description                                                           |
+| --------------------------- | --------------------------------------------------------------------- |
+| ``WHOOSHEE_DIR``            | The path for the whoosh index (defaults to **whooshee**)              |
+| ``WHOOSHEE_MIN_STRING_LEN`` | Min. characters for the search string (defaults to **3**)             |
+| ``WHOOSHEE_WRITER_TIMEOUT`` | How long should whoosh try to acquire write lock? (defaults to **2**) |
+
 ### Reindex
 
 Available since v0.0.9.
