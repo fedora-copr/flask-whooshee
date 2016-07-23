@@ -11,8 +11,8 @@ flask-whooshee is based on so-called whoosheers. These represent Whoosh indexes 
 
 ```python
 from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.whooshee import Whooshee
+from flask_sqlalchemy import SQLAlchemy
+from flask_whooshee import Whooshee
 
 app = Flask(__name__)
 app.config['WHOOSHEE_DIR'] = '/tmp/whoosheers'
@@ -36,8 +36,8 @@ The more complicated custom whoosheers allow you to create indexes and search ac
 
 ```python
 from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.whooshee import Whooshee, AbstractWhoosheer
+from flask_sqlalchemy import SQLAlchemy
+from flask_whooshee import Whooshee, AbstractWhoosheer
 
 app = Flask(__name__)
 app.config['WHOOSHEE_DIR'] = /tmp/whoosheers
@@ -144,7 +144,7 @@ Available since v0.0.9.
 If you lost your whooshee data and you need to recreate it, you can run inside Flask application context:
 
 ```
-from flask.ext.whooshee import Whooshee
+from flask_whooshee import Whooshee
 w = Whooshee(app)
 w.reindex()
 ```

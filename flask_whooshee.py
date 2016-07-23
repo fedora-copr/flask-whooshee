@@ -10,7 +10,7 @@ import whoosh.fields
 import whoosh.index
 import whoosh.qparser
 
-from flask.ext.sqlalchemy import models_committed, BaseQuery
+from flask_sqlalchemy import models_committed, BaseQuery
 from sqlalchemy import text
 from sqlalchemy.orm.mapper import Mapper
 
@@ -261,7 +261,7 @@ class Whooshee(object):
         wh.index = index
 
     def on_commit(self, app, changes):
-        """Method that gets connected to flask.ext.sqlalchemy.models_committed, where it serves
+        """Method that gets connected to flask_sqlalchemy.models_committed, where it serves
         to do the actual index writing.
         """
         for wh in self.__class__.whoosheers:
