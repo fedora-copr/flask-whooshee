@@ -11,8 +11,8 @@ flask-whooshee is based on so-called whoosheers. These represent Whoosh indexes 
 
 ```python
 from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.whooshee import Whooshee
+from flask_sqlalchemy import SQLAlchemy
+from flask_whooshee import Whooshee
 
 app = Flask(__name__)
 app.config['WHOOSHEE_DIR'] = '/tmp/whoosheers'
@@ -36,8 +36,8 @@ The more complicated custom whoosheers allow you to create indexes and search ac
 
 ```python
 from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.whooshee import Whooshee, AbstractWhoosheer
+from flask_sqlalchemy import SQLAlchemy
+from flask_whooshee import Whooshee, AbstractWhoosheer
 
 app = Flask(__name__)
 app.config['WHOOSHEE_DIR'] = /tmp/whoosheers
@@ -127,6 +127,16 @@ Entry.query.whooshee_search('chuck norris', whoosheer=EntryUserWhoosheer).order_
 ```
 If there exists an entry of a user called 'chuck norris', this entry will be found because the custom whoosheer, that contains field `username`, will be used. But without the whoosheer option, that entry won't be found (unless it has 'chuck&nbsp;norris' in content or title) because the model whoosheer will be used.
 
+### Configuration
+
+Following configuration options are available:
+
+| Option                      | Description                                                           |
+| --------------------------- | --------------------------------------------------------------------- |
+| ``WHOOSHEE_DIR``            | The path for the whoosh index (defaults to **whooshee**)              |
+| ``WHOOSHEE_MIN_STRING_LEN`` | Min. characters for the search string (defaults to **3**)             |
+| ``WHOOSHEE_WRITER_TIMEOUT`` | How long should whoosh try to acquire write lock? (defaults to **2**) |
+
 ### Reindex
 
 Available since v0.0.9.
@@ -134,7 +144,7 @@ Available since v0.0.9.
 If you lost your whooshee data and you need to recreate it, you can run inside Flask application context:
 
 ```
-from flask.ext.whooshee import Whooshee
+from flask_whooshee import Whooshee
 w = Whooshee(app)
 w.reindex()
 ```

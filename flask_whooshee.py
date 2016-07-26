@@ -10,7 +10,7 @@ import whoosh.fields
 import whoosh.index
 import whoosh.qparser
 
-from flask.ext.sqlalchemy import models_committed, BaseQuery
+from flask_sqlalchemy import models_committed, BaseQuery
 from sqlalchemy import text
 from sqlalchemy.orm.mapper import Mapper
 
@@ -156,7 +156,7 @@ class Whooshee(object):
     def init_app(self, app):
 
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
-        self.search_string_min_len = app.config.get('WHOSHEE_MIN_STRING_LEN', 3)
+        self.search_string_min_len = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
         self.writer_timeout = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
         models_committed.connect(self.on_commit, sender=app)
         if not os.path.exists(self.index_path_root):
@@ -261,7 +261,7 @@ class Whooshee(object):
         wh.index = index
 
     def on_commit(self, app, changes):
-        """Method that gets connected to flask.ext.sqlalchemy.models_committed, where it serves
+        """Method that gets connected to flask_sqlalchemy.models_committed, where it serves
         to do the actual index writing.
         """
         for wh in self.__class__.whoosheers:
