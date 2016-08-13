@@ -2,6 +2,7 @@ import abc
 import os
 import re
 import sys
+import warnings
 
 import sqlalchemy
 
@@ -156,8 +157,13 @@ class Whooshee(object):
     def init_app(self, app):
 
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
-        self.search_string_min_len = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
         self.writer_timeout = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
+        self.search_string_min_len = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
+
+        if app.config.get('WHOOSHE_MIN_STRING_LEN', None) is not None:
+            warnings.warn(WhoosheeDeprecationWarning("The config key WHOOSHE_MIN_STRING_LEN has been renamed to WHOOSHEE_MIN_STRING_LEN. The mispelled config key is deprecated and will be removed in upcoming releases. Change it to WHOOSHEE_MIN_STRING_LEN to suppress this warning"))
+            self.search_string_min_len = app.config.get('WHOOSHE_MIN_STRING_LEN')
+
         models_committed.connect(self.on_commit, sender=app)
         if not os.path.exists(self.index_path_root):
             os.makedirs(self.index_path_root)
@@ -294,3 +300,10 @@ class Whooshee(object):
                 for item in model.query.all():
                     getattr(wh, method_name)(writer, item)
             writer.commit()
+
+
+class WhoosheeDeprecationWarning(DeprecationWarning):
+    pass
+
+
+warnings.simplefilter('always', WhoosheeDeprecationWarning)
