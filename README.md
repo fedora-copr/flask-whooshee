@@ -117,6 +117,8 @@ Now you can search join queries like this:
 Entry.query.join(User).whooshee_search('chuck norris').order_by(Entry.id.desc()).all()
 ```
 
+*NOTE* When you're introducing flask-whooshee to a new application, you'll need to manually tell it to index your old data. You can do this by using [reindexing](#reindex).
+
 The whoosheer that is used for searching is, by default, selected based on the models participating in the query.
 This set of models is compared against the value of `models` attribute of each registered whoosheer and the one
 with an exact match is selected. You can override this behaviour by explicitly passing whoosheer that should be
@@ -141,7 +143,7 @@ Following configuration options are available:
 
 Available since v0.0.9.
 
-If you lost your whooshee data and you need to recreate it, you can run inside Flask application context:
+If you lost your whooshee data and you need to recreate it or you are introducing flask-whooshee to an existing app and you need to index already existing data, you can run inside Flask application context:
 
 ```
 from flask_whooshee import Whooshee
