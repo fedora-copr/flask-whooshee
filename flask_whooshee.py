@@ -270,9 +270,9 @@ class Whooshee(object):
     def after_insert(self, mapper, connection, target):
         self.on_commit([[target, 'insert']])
     def after_delete(self, mapper, connection, target):
-        self.on_commit([[target, 'insert']])
+        self.on_commit([[target, 'delete']])
     def after_update(self, mapper, connection, target):
-        self.on_commit([[target, 'insert']])
+        self.on_commit([[target, 'update']])
 
     def on_commit(self, changes):
         """Method that gets called when a model is changed. This serves
