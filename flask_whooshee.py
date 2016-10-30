@@ -11,8 +11,9 @@ import whoosh.fields
 import whoosh.index
 import whoosh.qparser
 
-from flask_sqlalchemy import models_committed, BaseQuery
-from sqlalchemy import text
+from flask import current_app
+from flask_sqlalchemy import BaseQuery
+from sqlalchemy import text, event
 from sqlalchemy.orm.mapper import Mapper
 
 class WhoosheeQuery(BaseQuery):
@@ -164,7 +165,6 @@ class Whooshee(object):
             warnings.warn(WhoosheeDeprecationWarning("The config key WHOOSHE_MIN_STRING_LEN has been renamed to WHOOSHEE_MIN_STRING_LEN. The mispelled config key is deprecated and will be removed in upcoming releases. Change it to WHOOSHEE_MIN_STRING_LEN to suppress this warning"))
             self.search_string_min_len = app.config.get('WHOOSHE_MIN_STRING_LEN')
 
-        models_committed.connect(self.on_commit, sender=app)
         if not os.path.exists(self.index_path_root):
             os.makedirs(self.index_path_root)
 
@@ -184,6 +184,9 @@ class Whooshee(object):
         self.__class__.whoosheers.append(wh)
         self.create_index(wh)
         for model in wh.models:
+            event.listen(model, 'after_insert', self.after_insert)
+            event.listen(model, 'after_update', self.after_update)
+            event.listen(model, 'after_delete', self.after_insert)
             model.query_class = WhoosheeQuery
         return wh
 
@@ -244,7 +247,6 @@ class Whooshee(object):
             setattr(mwh, 'update_{0}'.format(model.__name__.lower()), update_model)
             setattr(mwh, 'insert_{0}'.format(model.__name__.lower()), insert_model)
             setattr(mwh, 'delete_{0}'.format(model.__name__.lower()), delete_model)
-
             model._whoosheer_ = mwh
             model.whoosh_search = mwh.search
             self.register_whoosheer(mwh)
@@ -265,9 +267,15 @@ class Whooshee(object):
                 os.makedirs(index_path)
             index = whoosh.index.create_in(index_path, wh.schema)
         wh.index = index
+    def after_insert(self, mapper, connection, target):
+        self.on_commit([[target, 'insert']])
+    def after_delete(self, mapper, connection, target):
+        self.on_commit([[target, 'insert']])
+    def after_update(self, mapper, connection, target):
+        self.on_commit([[target, 'insert']])
 
-    def on_commit(self, app, changes):
-        """Method that gets connected to flask_sqlalchemy.models_committed, where it serves
+    def on_commit(self, changes):
+        """Method that gets called when a model is changed. This serves
         to do the actual index writing.
         """
         for wh in self.__class__.whoosheers:
