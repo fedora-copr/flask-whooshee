@@ -11,7 +11,6 @@ import whoosh.fields
 import whoosh.index
 import whoosh.qparser
 
-from flask import current_app
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy import text, event
 from sqlalchemy.orm.mapper import Mapper
@@ -267,10 +266,13 @@ class Whooshee(object):
                 os.makedirs(index_path)
             index = whoosh.index.create_in(index_path, wh.schema)
         wh.index = index
+
     def after_insert(self, mapper, connection, target):
         self.on_commit([[target, 'insert']])
+
     def after_delete(self, mapper, connection, target):
         self.on_commit([[target, 'delete']])
+        
     def after_update(self, mapper, connection, target):
         self.on_commit([[target, 'update']])
 
