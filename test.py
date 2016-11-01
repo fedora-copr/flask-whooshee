@@ -21,6 +21,7 @@ class BaseTestCases(object):
             self.app.config['WHOOSHEE_DIR'] = tempfile.mkdtemp()
             self.app.config['DATABASE_URL'] = 'sqlite:///:memory:'
             self.app.config['TESTING'] = True
+            self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
             self.db = SQLAlchemy(self.app)
 
