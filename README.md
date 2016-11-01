@@ -103,8 +103,7 @@ class EntryUserWhoosheer(AbstractWhoosheer):
 
     @classmethod
     def delete_user(cls, writer, user):
-        # nothing, user doesn't have entries yet
-        pass
+        pass # TODO: delete all users entries
 
     @classmethod
     def delete_entry(cls, writer, entry):
