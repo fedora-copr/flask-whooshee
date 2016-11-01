@@ -20,6 +20,9 @@ UPDATE_KWD = 'update'
 DELETE_KWD = 'delete'
 
 
+__version__ = '0.3.0'
+
+
 class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
 
