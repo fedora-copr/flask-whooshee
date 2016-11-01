@@ -166,7 +166,6 @@ Entry.query.join(User).whooshee_search('chuck norris', order_by_relevance=0).all
 Entry.query.join(User).whooshee_search('chuck norris', order_by_relevance=25).all()
 ```
 
+Project is in early beta stage and is fairly stable. However, API may still change before 1.0.0 release.
 
-Project is in early alpha stage, documentation and more functionality will be landing soon.
-
-Licensed under GPLv2+
+Flask-whooshee is licensed under BSD license. Note that up until 0.3.0 it was licensed under GPLv2+.
