@@ -286,6 +286,11 @@ class BaseTestCases(object):
             found = self.Entry.query.whooshee_search('blah blah blah').all()
             self.assertEqual(len(found), 0)
 
+            # make sure that the entry has actually been deleted from the whoosh index
+            # https://github.com/bkabrda/flask-whooshee/pull/26#issuecomment-257549715
+            whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == set([self.Entry]))
+            self.assertEqual(len(whoosheer.search('blah blah blah')), 0)
+
         # TODO: more :)
 
 class TestsWithApp(BaseTestCases.BaseTest):

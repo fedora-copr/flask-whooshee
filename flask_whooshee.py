@@ -185,7 +185,7 @@ class Whooshee(object):
         for model in wh.models:
             event.listen(model, 'after_insert', self.after_insert)
             event.listen(model, 'after_update', self.after_update)
-            event.listen(model, 'after_delete', self.after_insert)
+            event.listen(model, 'after_delete', self.after_delete)
             model.query_class = WhoosheeQuery
         return wh
 
@@ -272,7 +272,7 @@ class Whooshee(object):
 
     def after_delete(self, mapper, connection, target):
         self.on_commit([[target, 'delete']])
-        
+
     def after_update(self, mapper, connection, target):
         self.on_commit([[target, 'update']])
 
