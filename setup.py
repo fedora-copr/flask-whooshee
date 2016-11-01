@@ -9,7 +9,7 @@ except:
 
 setup(
     name='flask-whooshee',
-    version='0.3.0',
+    version='0.3.1',
     description='Flask - SQLAlchemy - Whoosh integration',
     long_description=''.join(open('README.md').readlines()),
     keywords='flask, sqlalchemy, whoosh',

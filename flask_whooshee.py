@@ -20,7 +20,7 @@ UPDATE_KWD = 'update'
 DELETE_KWD = 'delete'
 
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 
 class WhoosheeQuery(BaseQuery):
