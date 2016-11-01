@@ -15,6 +15,11 @@ from flask_sqlalchemy import BaseQuery
 from sqlalchemy import text, event
 from sqlalchemy.orm.mapper import Mapper
 
+INSERT_KWD = 'insert'
+UPDATE_KWD = 'update'
+DELETE_KWD = 'delete'
+
+
 class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
 
@@ -183,9 +188,9 @@ class Whooshee(object):
         self.__class__.whoosheers.append(wh)
         self.create_index(wh)
         for model in wh.models:
-            event.listen(model, 'after_insert', self.after_insert)
-            event.listen(model, 'after_update', self.after_update)
-            event.listen(model, 'after_delete', self.after_delete)
+            event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
+            event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
+            event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
             model.query_class = WhoosheeQuery
         return wh
 
@@ -243,9 +248,9 @@ class Whooshee(object):
             def delete_model(cls, writer, model):
                 writer.delete_by_term(primary, getattr(model, primary))
 
-            setattr(mwh, 'update_{0}'.format(model.__name__.lower()), update_model)
-            setattr(mwh, 'insert_{0}'.format(model.__name__.lower()), insert_model)
-            setattr(mwh, 'delete_{0}'.format(model.__name__.lower()), delete_model)
+            setattr(mwh, '{0}_{1}'.format(UPDATE_KWD, model.__name__.lower()), update_model)
+            setattr(mwh, '{0}_{1}'.format(INSERT_KWD, model.__name__.lower()), insert_model)
+            setattr(mwh, '{0}_{1}'.format(DELETE_KWD, model.__name__.lower()), delete_model)
             model._whoosheer_ = mwh
             model.whoosh_search = mwh.search
             self.register_whoosheer(mwh)
@@ -268,13 +273,13 @@ class Whooshee(object):
         wh.index = index
 
     def after_insert(self, mapper, connection, target):
-        self.on_commit([[target, 'insert']])
+        self.on_commit([[target, INSERT_KWD]])
 
     def after_delete(self, mapper, connection, target):
-        self.on_commit([[target, 'delete']])
+        self.on_commit([[target, DELETE_KWD]])
 
     def after_update(self, mapper, connection, target):
-        self.on_commit([[target, 'update']])
+        self.on_commit([[target, UPDATE_KWD]])
 
     def on_commit(self, changes):
         """Method that gets called when a model is changed. This serves
@@ -306,7 +311,7 @@ class Whooshee(object):
         for wh in self.__class__.whoosheers:
             writer = wh.index.writer(timeout=self.writer_timeout)
             for model in wh.models:
-                method_name = "update_{0}".format(model.__name__.lower())
+                method_name = "{0}_{1}".format(UPDATE_KWD, model.__name__.lower())
                 for item in model.query.all():
                     getattr(wh, method_name)(writer, item)
             writer.commit()
