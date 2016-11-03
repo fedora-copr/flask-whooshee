@@ -158,12 +158,12 @@ class Whooshee(object):
     whoosheers = []
 
     def __init__(self, app=None):
-
+        self.app = app
         if app:
             self.init_app(app)
 
     def init_app(self, app):
-
+        self.app = app
         self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
         self.writer_timeout = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
         self.search_string_min_len = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
@@ -174,27 +174,41 @@ class Whooshee(object):
 
         if not os.path.exists(self.index_path_root):
             os.makedirs(self.index_path_root)
+        self._init_whoosheers(self.__class__.whoosheers)
 
-    def register_whoosheer(self, wh):
-        """Registers a given whoosheer:
+    def _init_whoosheers(self, whoosheers):
+        """Initializes all whoosheers:
 
         * Creates and opens an index for it (if it doesn't exist yet)
         * Sets some default values on it (unless they're already set)
         * Replaces query class of every whoosheer's model by WhoosheeQuery
+
+        This is called when:
+        a) `init_app` is called (called on initialization if `app` is passed; or on explicit
+           `init_app` call)
+        b) when a whoosheer is registered and `init_app` has already been called as noted in a)
+        Thanks to this, we can allow users to use app factories as requested at
+        https://github.com/bkabrda/flask-whooshee/issues/21.
         """
-        if not hasattr(wh, 'search_string_min_len'):
-            wh.search_string_min_len = self.search_string_min_len
-        if not hasattr(wh, 'index_subdir'):
-            # TODO: do we really want/need to use camel casing?
-            # everywhere else, there is just .lower()
-            wh.index_subdir = self.camel_to_snake(wh.__name__)
+        for wh in whoosheers:
+            if not hasattr(wh, 'search_string_min_len'):
+                wh.search_string_min_len = self.search_string_min_len
+            if not hasattr(wh, 'index_subdir'):
+                # TODO: do we really want/need to use camel casing?
+                # everywhere else, there is just .lower()
+                wh.index_subdir = self.camel_to_snake(wh.__name__)
+            self.create_index(wh)
+            for model in wh.models:
+                event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
+                event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
+                event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
+                model.query_class = WhoosheeQuery
+
+    def register_whoosheer(self, wh):
+        """Registers the given whoosheer"""
         self.__class__.whoosheers.append(wh)
-        self.create_index(wh)
-        for model in wh.models:
-            event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
-            event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
-            event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
-            model.query_class = WhoosheeQuery
+        if self.app:
+            self._init_whoosheers([wh])
         return wh
 
     def register_model(self, *index_fields, **kw):
