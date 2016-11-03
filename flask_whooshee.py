@@ -24,6 +24,10 @@ DELETE_KWD = 'delete'
 __version__ = '0.3.1'
 
 
+def _get_config(obj):
+    return (getattr(obj, 'app', None) or current_app).extensions['whooshee']
+
+
 class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
 
@@ -56,7 +60,7 @@ class WhoosheeQuery(BaseQuery):
                 # SQLAlchemy < 0.8.0
                 entities.update(set(self._join_entities))
 
-            whoosheer = next(w for w in current_app.extensions['whooshee']['whoosheers_indexes']
+            whoosheer = next(w for w in _get_config(self)['whoosheers_indexes']
                              if set(w.models) == entities)
 
         # TODO what if unique field doesn't exist or there are multiple?
@@ -129,7 +133,7 @@ class AbstractWhoosheer(object):
         Returns:
             Found records if 'not values_of', else values of given column
         """
-        index = current_app.extensions['whooshee']['whoosheers_indexes'][cls]
+        index = _get_config(cls)['whoosheers_indexes'][cls]
         prepped_string = cls.prep_search_string(search_string, match_substrings)
         with index.searcher() as searcher:
             parser = whoosh.qparser.MultifieldParser(cls.schema.names(), index.schema, group=group)
@@ -145,7 +149,7 @@ class AbstractWhoosheer(object):
         s = search_string.strip()
         # we don't want stars from user
         s = s.replace('*', '')
-        if len(s) < current_app.extensions['whooshee']['search_string_min_len']:
+        if len(s) < _get_config(cls)['search_string_min_len']:
             raise ValueError('Search string must have at least 3 characters')
         # replace multiple with star space star
         if match_substrings:
@@ -167,10 +171,13 @@ class Whooshee(object):
         self.whoosheers = []
         if app:
             self.init_app(app)
-
-    @property
-    def config(self):
-        return (self.app or current_app).extensions['whooshee']
+            # if we have app, create subclass of WhoosheeQuery that will carry it and
+            # always use it for models associated to this Whooshee
+            class WhoosheeQueryWithApp(WhoosheeQuery):
+                app = self.app
+            self.query = WhoosheeQueryWithApp
+        else:
+            self.query = WhoosheeQuery
 
     def init_app(self, app):
         if not hasattr(app, 'extensions'):
@@ -211,13 +218,14 @@ class Whooshee(object):
             event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
             event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
             event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
-            model.query_class = WhoosheeQuery
+            model.query_class = self.query
 
     def register_whoosheer(self, wh):
         """Registers the given whoosheer"""
         self.whoosheers.append(wh)
         if self.app:
             self._init_whoosheer(self.app, wh)
+            wh.app = self.app
         return wh
 
     def register_model(self, *index_fields, **kw):
@@ -322,8 +330,8 @@ class Whooshee(object):
                     method = getattr(wh, method_name, None)
                     if method:
                         if not writer:
-                            writer = self.config['whoosheers_indexes'][wh].\
-                                writer(timeout=self.config['writer_timeout'])
+                            writer = _get_config(self)['whoosheers_indexes'][wh].\
+                                writer(timeout=_get_config(self)['writer_timeout'])
                         method(writer, change[0])
             if writer:
                 writer.commit()
@@ -338,8 +346,8 @@ class Whooshee(object):
         This method retrieve all data from registered models and call
         update_<model>() function for every instance of such model.
         """
-        for wh, index in self.config['whoosheers_indexes'].items():
-            writer = index.writer(timeout=self.config['writer_timeout'])
+        for wh, index in _get_config(self)['whoosheers_indexes'].items():
+            writer = index.writer(timeout=_get_config(self)['writer_timeout'])
             for model in wh.models:
                 method_name = "{0}_{1}".format(UPDATE_KWD, model.__name__.lower())
                 for item in model.query.all():
