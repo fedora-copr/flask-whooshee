@@ -103,14 +103,10 @@ class BaseTestCases(object):
 
             self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
 
-            self.ctx = self.app.app_context()
-            self.ctx.push()
-
         def tearDown(self):
             shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
             Whooshee.whoosheers = []
             self.db.drop_all()
-            self.ctx.pop()
 
         # tests testing model whoosheers should have mw in their name, for custom whoosheers it's cw
         # ideally, there should be a separate class for model whoosheer and custom whoosheer
@@ -315,3 +311,10 @@ class TestsWithInitApp(BaseTestCases.BaseTest):
         # we intentionally call `init_app` after creating whoosheers, to test that lazy app
         # intialization is possible
         self.wh.init_app(self.app)
+
+        self.ctx = self.app.app_context()
+        self.ctx.push()
+
+    def tearDown(self):
+        super(TestsWithInitApp, self).tearDown()
+        self.ctx.pop()
