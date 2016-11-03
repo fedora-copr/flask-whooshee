@@ -1,12 +1,11 @@
-flask-whooshee
-==============
+# flask-whooshee
 
 Customizable Flask - SQLAlchemy - Whoosh integration
 
 flask-whooshee provides more advanced Whoosh integration into Flask. Its main power is in the ability to index and search joined queries (which to my knowledge no other Flask - SQLAlchemy - Whoosh integration library doesn't provide).
 
-How it works
-------------
+## How it works
+
 flask-whooshee is based on so-called whoosheers. These represent Whoosh indexes and they are responsible for indexing new/updated fields. There are two types of whoosheers. The simple *model whoosheers*, that index fields from just one index look like this:
 
 ```python
@@ -128,7 +127,7 @@ Entry.query.whooshee_search('chuck norris', whoosheer=EntryUserWhoosheer).order_
 ```
 If there exists an entry of a user called 'chuck norris', this entry will be found because the custom whoosheer, that contains field `username`, will be used. But without the whoosheer option, that entry won't be found (unless it has 'chuck&nbsp;norris' in content or title) because the model whoosheer will be used.
 
-### Configuration
+## Configuration
 
 Following configuration options are available:
 
@@ -138,7 +137,40 @@ Following configuration options are available:
 | ``WHOOSHEE_MIN_STRING_LEN`` | Min. characters for the search string (defaults to **3**)             |
 | ``WHOOSHEE_WRITER_TIMEOUT`` | How long should whoosh try to acquire write lock? (defaults to **2**) |
 
-### Reindex
+## Lazy app initialization
+
+Since version 0.3.2, flask-whooshe allows lazy initialization, commonly used with app factories:
+
+```python
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_whooshee import Whooshee
+
+db = SQLAlchemy()
+whooshee = Whooshee()  # we don't pass app, but call init_app in create_app below
+
+
+def create_app():
+    app = Flask(__name__)
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+    db.init_app(app)
+    whooshee.init_app(app)
+
+    return app
+
+
+@whooshee.register_model('text')
+class Article(db.Model):
+    __tablename__ = 'asd'
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.UnicodeText)
+
+
+create_app().run()
+```
+
+## Reindex
 
 Available since v0.0.9.
 
@@ -149,7 +181,7 @@ from flask_whooshee import Whooshee
 w = Whooshee(app)
 w.reindex()
 ```
-### Search results ordering
+## Search results ordering
 
 By default only first 10 (for optimization reasons) search results are sorted by relevance.
 You can modify this behaviour by explicitly setting the value of `order_by_relevance`
