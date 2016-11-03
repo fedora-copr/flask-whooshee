@@ -25,6 +25,7 @@ __version__ = '0.3.1'
 
 class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
+    whooshee_instance = None
 
     def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, whoosheer=None,
                         match_substrings=True, limit=None, order_by_relevance=10):
@@ -55,7 +56,8 @@ class WhoosheeQuery(BaseQuery):
                 # SQLAlchemy < 0.8.0
                 entities.update(set(self._join_entities))
 
-            whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == entities)
+            whoosheer = next(w for w in self.whooshee_instance.whoosheers
+                             if set(w.models) == entities)
 
         # TODO what if unique field doesn't exist or there are multiple?
         for fname, field in list(whoosheer.schema._fields.items()):
@@ -155,12 +157,20 @@ class Whooshee(object):
 
     _underscore_re1 = re.compile(r'(.)([A-Z][a-z]+)')
     _underscore_re2 = re.compile('([a-z0-9])([A-Z])')
-    whoosheers = []
 
     def __init__(self, app=None):
         self.app = app
+        self.whoosheers = []
         if app:
             self.init_app(app)
+        # since `model.query_class` in `_init_whoosheers` must be class, not instance, we create
+        #   a subclass of `WhoosheeQuery` and set `whooshee_instance` to `self`, so that it has
+        #   access to self.whoosheers
+        class WQ(WhoosheeQuery):
+            whooshee_instance = self
+
+        self.query_class = WQ
+
 
     def init_app(self, app):
         self.app = app
@@ -174,7 +184,7 @@ class Whooshee(object):
 
         if not os.path.exists(self.index_path_root):
             os.makedirs(self.index_path_root)
-        self._init_whoosheers(self.__class__.whoosheers)
+        self._init_whoosheers(self.whoosheers)
 
     def _init_whoosheers(self, whoosheers):
         """Initializes all whoosheers:
@@ -202,11 +212,11 @@ class Whooshee(object):
                 event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
                 event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
                 event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
-                model.query_class = WhoosheeQuery
+                model.query_class = self.query_class
 
     def register_whoosheer(self, wh):
         """Registers the given whoosheer"""
-        self.__class__.whoosheers.append(wh)
+        self.whoosheers.append(wh)
         if self.app:
             self._init_whoosheers([wh])
         return wh
@@ -302,7 +312,7 @@ class Whooshee(object):
         """Method that gets called when a model is changed. This serves
         to do the actual index writing.
         """
-        for wh in self.__class__.whoosheers:
+        for wh in self.whoosheers:
             writer = None
             for change in changes:
                 if change[0].__class__ in wh.models:
@@ -325,7 +335,7 @@ class Whooshee(object):
         This method retrieve all data from registered models and call
         update_<model>() function for every instance of such model.
         """
-        for wh in self.__class__.whoosheers:
+        for wh in self.whoosheers:
             writer = wh.index.writer(timeout=self.writer_timeout)
             for model in wh.models:
                 method_name = "{0}_{1}".format(UPDATE_KWD, model.__name__.lower())

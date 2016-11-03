@@ -288,7 +288,7 @@ class BaseTestCases(object):
 
             # make sure that the entry has actually been deleted from the whoosh index
             # https://github.com/bkabrda/flask-whooshee/pull/26#issuecomment-257549715
-            whoosheer = next(w for w in Whooshee.whoosheers if set(w.models) == set([self.Entry]))
+            whoosheer = next(w for w in self.wh.whoosheers if set(w.models) == set([self.Entry]))
             self.assertEqual(len(whoosheer.search('blah blah blah')), 0)
 
         # TODO: more :)
@@ -306,6 +306,8 @@ class TestsWithInitApp(BaseTestCases.BaseTest):
     def setUp(self):
 
         self.wh = Whooshee()
-        self.wh.init_app(self.app)
 
         super(TestsWithInitApp, self).setUp()
+        # we intentionally call `init_app` after creating whoosheers, to test that lazy app
+        # intialization is possible
+        self.wh.init_app(self.app)
