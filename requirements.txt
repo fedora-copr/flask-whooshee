@@ -1,3 +1,5 @@
-blinker
-flask-sqlalchemy
-whoosh
+-e .
+
+# for testing and docs
+sphinx
+nose
