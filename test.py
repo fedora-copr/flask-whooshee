@@ -19,7 +19,7 @@ class BaseTestCases(object):
             self.app = Flask(__name__)
 
             self.app.config['WHOOSHEE_DIR'] = tempfile.mkdtemp()
-            self.app.config['DATABASE_URL'] = 'sqlite:///:memory:'
+            self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
             self.app.config['TESTING'] = True
             self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -318,3 +318,133 @@ class TestsWithInitApp(BaseTestCases.BaseTest):
     def tearDown(self):
         super(TestsWithInitApp, self).tearDown()
         self.ctx.pop()
+
+
+class TestMultipleApps(TestCase):
+    def setUp(self):
+        self.db = SQLAlchemy()
+        self.wh = Whooshee()
+        for a in ['app1', 'app2']:
+            app = Flask(a)
+            app.config['WHOOSHEE_DIR'] = tempfile.mkdtemp()
+            app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+            app.config['TESTING'] = True
+            app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+            self.db.init_app(app)
+            self.wh.init_app(app)
+            setattr(self, a, app)
+
+        class User(self.db.Model):
+            id = self.db.Column(self.db.Integer, primary_key=True)
+            name = self.db.Column(self.db.String)
+
+        # separate index for just entry
+        @self.wh.register_model('title', 'content')
+        class Entry(self.db.Model):
+            id = self.db.Column(self.db.Integer, primary_key=True)
+            title = self.db.Column(self.db.String)
+            content = self.db.Column(self.db.Text)
+            user = self.db.relationship(User, backref = self.db.backref('entries'))
+            user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
+
+        # index for both entry and user
+        @self.wh.register_whoosheer
+        class EntryUserWhoosheer(AbstractWhoosheer):
+            schema = whoosh.fields.Schema(
+                entry_id = whoosh.fields.NUMERIC(stored=True, unique=True),
+                user_id = whoosh.fields.NUMERIC(stored=True),
+                username = whoosh.fields.TEXT(),
+                title = whoosh.fields.TEXT(),
+                content = whoosh.fields.TEXT())
+
+            models = [Entry, User]
+
+            @classmethod
+            def update_user(cls, writer, user):
+                pass # TODO: update all users entries
+
+            @classmethod
+            def update_entry(cls, writer, entry):
+                writer.update_document(entry_id=entry.id,
+                                        user_id=entry.user.id,
+                                        username=entry.user.name,
+                                        title=entry.title,
+                                        content=entry.content)
+
+            @classmethod
+            def insert_user(cls, writer, user):
+                # nothing, user doesn't have entries yet
+                pass
+
+            @classmethod
+            def insert_entry(cls, writer, entry):
+                writer.add_document(entry_id=entry.id,
+                                    user_id=entry.user.id,
+                                    username=entry.user.name,
+                                    title=entry.title,
+                                    content=entry.content)
+
+            @classmethod
+            def delete_user(cls, writer, user):
+                # nothing, user doesn't have entries yet
+                pass
+
+            @classmethod
+            def delete_entry(cls, writer, entry):
+                writer.delete_by_term('entry_id', entry.id)
+
+        self.User = User
+        self.Entry = Entry
+        self.EntryUserWhoosheer = EntryUserWhoosheer
+
+        self.db.create_all(app=self.app1)
+        self.db.create_all(app=self.app2)
+
+        self.u1 = User(name=u'chuck')
+        self.u2 = User(name=u'arnold')
+        self.u3 = User(name=u'silvester')
+
+        self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
+        self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
+        self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
+        self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
+
+        self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
+
+    def tearDown(self):
+        shutil.rmtree(self.app1.config['WHOOSHEE_DIR'], ignore_errors=True)
+        shutil.rmtree(self.app2.config['WHOOSHEE_DIR'], ignore_errors=True)
+        self.db.drop_all(app=self.app1)
+        self.db.drop_all(app=self.app2)
+
+    def test_multiple_apps(self):
+        # IIUC, you can't add the same model instance under multiple apps with flask-sqlalchemy
+        #  this pretty much reduces the testing to "make sure we used the right app to do
+        #  the search"
+        with self.app1.test_request_context():
+            self.db.session.add_all([self.u2, self.u3, self.e3, self.e4])
+            self.db.session.commit()
+
+        with self.app2.test_request_context():
+            self.db.session.add_all([self.u1, self.e1, self.e2])
+            self.db.session.commit()
+
+        # make sure that entities stored only for app1 are only found for app1, same for app2
+        with self.app1.test_request_context():
+            q = self.Entry.query.whooshee_search('chuck')
+            self.assertEqual(len(q.all()), 1)
+            self.assertEqual(q[0].title, 'the less dangerous')
+        with self.app2.test_request_context():
+            q = self.Entry.query.whooshee_search('chuck')
+            self.assertEqual(len(q.all()), 1)
+            self.assertEqual(q[0].title, 'chuck nr. 1 article')
+
+        # try deleting everything from one app and then searching again
+        with self.app1.test_request_context():
+            self.Entry.query.delete()
+            q = self.Entry.query.whooshee_search('chuck')
+            self.assertEqual(len(q.all()), 0)
+        with self.app2.test_request_context():
+            q = self.Entry.query.whooshee_search('chuck')
+            self.assertEqual(len(q.all()), 1)
+            self.assertEqual(q[0].title, 'chuck nr. 1 article')
