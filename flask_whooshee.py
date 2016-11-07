@@ -37,16 +37,16 @@ class WhoosheeQuery(BaseQuery):
     def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, whoosheer=None,
                         match_substrings=True, limit=None, order_by_relevance=10):
         """Do a fulltext search on the query.
+        Returns a query filtered with results of the fulltext search.
 
-        Args:
-            search_string: string to search for
-            group: whoosh group to use for searching, defaults to OrGroup (searches for all
-                   words in all columns)
-            match_substrings: True if you want to match substrings, False otherwise
-            limit: number of the top records to be returned, default None returns all records
-
-        Returns:
-            query filtered with results of the fulltext search
+        :param search_string: The string to search for.
+        :param group: The whoosh group to use for searching.
+                      Defaults to :class:`whoosh.qparser.OrGroup` which
+                      searches for all words in all columns.
+        :param match_substrings: ``True`` if you want to match substrings,
+                                 ``False`` otherwise
+        :param limit: The number of the top records to be returned.
+                      Defaults to ``None`` and returns all records.
         """
         if not whoosheer:
             ### inspiration taken from flask-WhooshAlchemy
@@ -114,24 +114,27 @@ class AbstractWhoosheer(object):
     Whoosheer is basically a unit of fulltext search. It represents either of:
 
     * One table, in which case all given fields of the model is searched.
-    * More tables, in which case all given fields of all the tables are searched.
+    * More tables, in which case all given fields of all the tables are
+      searched.
     """
 
     @classmethod
     def search(cls, search_string, values_of='', group=whoosh.qparser.OrGroup, match_substrings=True, limit=None):
-        """Actually searches the fields for given search_string.
+        """Searches the fields for given search_string.
+        Returns the found records if 'values_of' is left empty,
+        else the values of the given columns.
 
-        Args:
-            search_string: string to search for
-            values_of: if given, the method will not return the whole records, but only values
-                       of given column (defaults to returning whole records)
-            group: whoosh group to use for searching, defaults to OrGroup (searches for all
-                   words in all columns)
-            match_substrings: True if you want to match substrings, False otherwise
-            limit: number of the top records to be returned, default None returns all records
-
-        Returns:
-            Found records if 'not values_of', else values of given column
+        :param search_string: The string to search for.
+        :param values_of: If given, the method will not return the whole
+                          records, but only values of given column.
+                          Defaults to returning whole records.
+        :param group: The whoosh group to use for searching.
+                      Defaults to :class:`whoosh.qparser.OrGroup` which
+                      searches for all words in all columns.
+        :param match_substrings: ``True`` if you want to match substrings,
+                                 ``False`` otherwise.
+        :param limit: The number of the top records to be returned.
+                      Defaults to ``None`` and returns all records.
         """
         index = Whooshee.get_or_create_index(_get_app(cls), cls)
         prepped_string = cls.prep_search_string(search_string, match_substrings)
@@ -145,7 +148,12 @@ class AbstractWhoosheer(object):
 
     @classmethod
     def prep_search_string(cls, search_string, match_substrings):
-        """Prepares search string as a proper whoosh search string."""
+        """Prepares search string as a proper whoosh search string.
+
+        :param search_string: The search string which should be prepared.
+        :param match_substrings: ``True`` if you want to match substrings,
+                                 ``False`` otherwise.
+        """
         s = search_string.strip()
         # we don't want stars from user
         s = s.replace('*', '')
@@ -160,8 +168,30 @@ class AbstractWhoosheer(object):
 AbstractWhoosheerMeta = abc.ABCMeta('AbstractWhoosheer', (AbstractWhoosheer,), {})
 
 class Whooshee(object):
-    """A top level class that allows to register whoosheers and adds an on_commit hook
-    to SQLAlchemy."""
+    """A top level class that allows to register whoosheers and adds an
+    on_commit hook to SQLAlchemy.
+
+    There are two different methods on setting up Flask-Whooshee for your
+    application. The first one would be to initialize it directly, thus
+    binding it to a specific application instance::
+
+        app = Flask(__name__)
+        whooshee = Whooshee(app)
+
+    and the second is to use the factory pattern which will allow you to
+    configure whooshee at a later point::
+
+        whooshee = Whooshee()
+        def create_app():
+            app = Flask(__name__)
+            whooshee.init_app(app)
+            return app
+
+    Please note that Whooshee will replace the Flask-SQLAlchemy's
+    `db.Model.query_class` with a whoosh specific query class,
+    :class:`WhoosheeQuery` which will enable full-text search on
+    the registered model.
+    """
 
     _underscore_re1 = re.compile(r'(.)([A-Z][a-z]+)')
     _underscore_re2 = re.compile('([a-z0-9])([A-Z])')
@@ -180,10 +210,12 @@ class Whooshee(object):
             self.query = WhoosheeQuery
 
     def init_app(self, app):
-        """Initialize an application:
+        """Initialize the extension. It will create the `index_path_root`
+        directory upon initalization but it will **not** create the index.
+        Please use :meth:`reindex` for this.
 
-        * Fill settings in app.extensions['whooshee']
-        * Create `index_path_root` if it doesn't exist yet
+        :param app: The application instance for which the extension should
+                    be initialized.
         """
         if not hasattr(app, 'extensions'):
             app.extensions = {}
@@ -205,12 +237,13 @@ class Whooshee(object):
             os.makedirs(config['index_path_root'])
 
     def register_whoosheer(self, wh):
-        """Registers the given whoosheer:
+        """This will register the given whoosher on `whoosheers`, create the
+        neccessary SQLAlchemy event listeners, replace the `query_class` with
+        our own query class which will provide the search functionality
+        and store the app on the whoosheer, so that we can always work
+        with that.
 
-        * Add it to self.whoosheers
-        * Make our hooks listen to models' inserts/updates/deletes
-        * Override models' query class
-        * If we have `self.app`, store it on the whoosheer, so that we always work with that
+        :param wh: The whoosher which should be registered.
         """
         self.whoosheers.append(wh)
         for model in wh.models:
@@ -224,7 +257,8 @@ class Whooshee(object):
 
     def register_model(self, *index_fields, **kw):
         """Registers a single model for fulltext search. This basically creates
-        a simple Whoosheer for the model and calls self.register_whoosheer on it.
+        a simple Whoosheer for the model and calls :func:`register_whoosheer`
+        on it.
         """
         # construct subclass of AbstractWhoosheer for a model
         class ModelWhoosheer(AbstractWhoosheerMeta):
@@ -288,9 +322,12 @@ class Whooshee(object):
 
     @classmethod
     def create_index(cls, app, wh):
-        """Creates and opens index for given whoosheer and given app.
+        """Creates and opens an index for the given whoosheer and app.
+        If the index already exists, it just opens it, otherwise it creates
+        it first.
 
-        If the index already exists, it just opens it, otherwise it creates it first.
+        :param app: The application instance.
+        :param wh: The whoosheer instance for which a index should be created.
         """
         # TODO: do we really want/need to use camel casing?
         # everywhere else, there is just .lower()
@@ -306,12 +343,21 @@ class Whooshee(object):
 
     @classmethod
     def camel_to_snake(self, s):
-        """Constructs nice dir name from class name, e.g. FooBar => foo_bar."""
+        """Constructs nice dir name from class name, e.g. FooBar => foo_bar.
+
+        :param s: The string which should be converted to snake_case.
+        """
         return self._underscore_re2.sub(r'\1_\2', self._underscore_re1.sub(r'\1_\2', s)).lower()
 
     @classmethod
     def get_or_create_index(cls, app, wh):
-        """Gets a previously cached index or creates a new one for given app and whoosheer."""
+        """Gets a previously cached index or creates a new one for the
+        given app and whoosheer.
+
+        :param app: The application instance.
+        :param wh: The whoosheer instance for which the index should be
+                   retrieved or created.
+        """
         if wh in app.extensions['whooshee']['whoosheers_indexes']:
             return app.extensions['whooshee']['whoosheers_indexes'][wh]
         index = cls.create_index(app, wh)
@@ -346,10 +392,11 @@ class Whooshee(object):
                 writer.commit()
 
     def reindex(self):
-        """ Reindex all data
+        """Reindex all data
 
-        This method retrieve all data from registered models and call
-        update_<model>() function for every instance of such model.
+        This method retrieves all the data from the registered models and
+        calls the ``update_<model>()`` function for every instance of such
+        model.
         """
         for wh in self.whoosheers:
             index = type(self).get_or_create_index(_get_app(self), wh)
