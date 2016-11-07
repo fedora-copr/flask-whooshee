@@ -11,6 +11,7 @@ import whoosh.fields
 import whoosh.index
 import whoosh.qparser
 
+from flask import current_app
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy import text, event
 from sqlalchemy.orm.mapper import Mapper
@@ -23,9 +24,15 @@ DELETE_KWD = 'delete'
 __version__ = '0.3.1'
 
 
+def _get_app(obj):
+    return (getattr(obj, 'app', None) or current_app)
+
+def _get_config(obj):
+    return _get_app(obj).extensions['whooshee']
+
+
 class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
-    whooshee_instance = None
 
     def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, whoosheer=None,
                         match_substrings=True, limit=None, order_by_relevance=10):
@@ -56,7 +63,7 @@ class WhoosheeQuery(BaseQuery):
                 # SQLAlchemy < 0.8.0
                 entities.update(set(self._join_entities))
 
-            whoosheer = next(w for w in self.whooshee_instance.whoosheers
+            whoosheer = next(w for w in _get_config(self)['whoosheers']
                              if set(w.models) == entities)
 
         # TODO what if unique field doesn't exist or there are multiple?
@@ -126,9 +133,10 @@ class AbstractWhoosheer(object):
         Returns:
             Found records if 'not values_of', else values of given column
         """
+        index = Whooshee.get_or_create_index(_get_app(cls), cls)
         prepped_string = cls.prep_search_string(search_string, match_substrings)
-        with cls.index.searcher() as searcher:
-            parser = whoosh.qparser.MultifieldParser(cls.schema.names(), cls.index.schema, group=group)
+        with index.searcher() as searcher:
+            parser = whoosh.qparser.MultifieldParser(cls.schema.names(), index.schema, group=group)
             query = parser.parse(prepped_string)
             results = searcher.search(query, limit=limit)
             if values_of:
@@ -141,7 +149,7 @@ class AbstractWhoosheer(object):
         s = search_string.strip()
         # we don't want stars from user
         s = s.replace('*', '')
-        if len(s) < cls.search_string_min_len:
+        if len(s) < _get_config(cls)['search_string_min_len']:
             raise ValueError('Search string must have at least 3 characters')
         # replace multiple with star space star
         if match_substrings:
@@ -163,62 +171,55 @@ class Whooshee(object):
         self.whoosheers = []
         if app:
             self.init_app(app)
-        # since `model.query_class` in `_init_whoosheers` must be class, not instance, we create
-        #   a subclass of `WhoosheeQuery` and set `whooshee_instance` to `self`, so that it has
-        #   access to self.whoosheers
-        class WQ(WhoosheeQuery):
-            whooshee_instance = self
-
-        self.query_class = WQ
-
+            # if we have app, create subclass of WhoosheeQuery that will carry it and
+            # always use it for models associated to this Whooshee
+            class WhoosheeQueryWithApp(WhoosheeQuery):
+                app = self.app
+            self.query = WhoosheeQueryWithApp
+        else:
+            self.query = WhoosheeQuery
 
     def init_app(self, app):
-        self.app = app
-        self.index_path_root = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
-        self.writer_timeout = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
-        self.search_string_min_len = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
+        """Initialize an application:
+
+        * Fill settings in app.extensions['whooshee']
+        * Create `index_path_root` if it doesn't exist yet
+        """
+        if not hasattr(app, 'extensions'):
+            app.extensions = {}
+        config = app.extensions.setdefault('whooshee', {})
+        # mapping that caches whoosheers to their indexes; used by `get_or_create_index`
+        config['whoosheers_indexes'] = {}
+        # store a reference to self whoosheers; this way, even whoosheers created after init_app
+        # was called will be found
+        config['whoosheers'] = self.whoosheers
+        config['index_path_root'] = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
+        config['writer_timeout'] = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
+        config['search_string_min_len'] = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
 
         if app.config.get('WHOOSHE_MIN_STRING_LEN', None) is not None:
             warnings.warn(WhoosheeDeprecationWarning("The config key WHOOSHE_MIN_STRING_LEN has been renamed to WHOOSHEE_MIN_STRING_LEN. The mispelled config key is deprecated and will be removed in upcoming releases. Change it to WHOOSHEE_MIN_STRING_LEN to suppress this warning"))
-            self.search_string_min_len = app.config.get('WHOOSHE_MIN_STRING_LEN')
+            config['search_string_min_len'] = app.config.get('WHOOSHE_MIN_STRING_LEN')
 
-        if not os.path.exists(self.index_path_root):
-            os.makedirs(self.index_path_root)
-        self._init_whoosheers(self.whoosheers)
-
-    def _init_whoosheers(self, whoosheers):
-        """Initializes all whoosheers:
-
-        * Creates and opens an index for it (if it doesn't exist yet)
-        * Sets some default values on it (unless they're already set)
-        * Replaces query class of every whoosheer's model by WhoosheeQuery
-
-        This is called when:
-        a) `init_app` is called (called on initialization if `app` is passed; or on explicit
-           `init_app` call)
-        b) when a whoosheer is registered and `init_app` has already been called as noted in a)
-        Thanks to this, we can allow users to use app factories as requested at
-        https://github.com/bkabrda/flask-whooshee/issues/21.
-        """
-        for wh in whoosheers:
-            if not hasattr(wh, 'search_string_min_len'):
-                wh.search_string_min_len = self.search_string_min_len
-            if not hasattr(wh, 'index_subdir'):
-                # TODO: do we really want/need to use camel casing?
-                # everywhere else, there is just .lower()
-                wh.index_subdir = self.camel_to_snake(wh.__name__)
-            self.create_index(wh)
-            for model in wh.models:
-                event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
-                event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
-                event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
-                model.query_class = self.query_class
+        if not os.path.exists(config['index_path_root']):
+            os.makedirs(config['index_path_root'])
 
     def register_whoosheer(self, wh):
-        """Registers the given whoosheer"""
+        """Registers the given whoosheer:
+
+        * Add it to self.whoosheers
+        * Make our hooks listen to models' inserts/updates/deletes
+        * Override models' query class
+        * If we have `self.app`, store it on the whoosheer, so that we always work with that
+        """
         self.whoosheers.append(wh)
+        for model in wh.models:
+            event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
+            event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
+            event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
+            model.query_class = self.query
         if self.app:
-            self._init_whoosheers([wh])
+            wh.app = self.app
         return wh
 
     def register_model(self, *index_fields, **kw):
@@ -285,19 +286,37 @@ class Whooshee(object):
 
         return inner
 
-    def create_index(self, wh):
-        """Creates and opens index for given whoosheer.
+    @classmethod
+    def create_index(cls, app, wh):
+        """Creates and opens index for given whoosheer and given app.
 
         If the index already exists, it just opens it, otherwise it creates it first.
         """
-        index_path = os.path.join(self.index_path_root, wh.index_subdir)
+        # TODO: do we really want/need to use camel casing?
+        # everywhere else, there is just .lower()
+        index_path = os.path.join(app.extensions['whooshee']['index_path_root'],
+                                  getattr(wh, 'index_subdir', cls.camel_to_snake(wh.__name__)))
         if whoosh.index.exists_in(index_path):
             index = whoosh.index.open_dir(index_path)
         else:
             if not os.path.exists(index_path):
                 os.makedirs(index_path)
             index = whoosh.index.create_in(index_path, wh.schema)
-        wh.index = index
+        return index
+
+    @classmethod
+    def camel_to_snake(self, s):
+        """Constructs nice dir name from class name, e.g. FooBar => foo_bar."""
+        return self._underscore_re2.sub(r'\1_\2', self._underscore_re1.sub(r'\1_\2', s)).lower()
+
+    @classmethod
+    def get_or_create_index(cls, app, wh):
+        """Gets a previously cached index or creates a new one for given app and whoosheer."""
+        if wh in app.extensions['whooshee']['whoosheers_indexes']:
+            return app.extensions['whooshee']['whoosheers_indexes'][wh]
+        index = cls.create_index(app, wh)
+        app.extensions['whooshee']['whoosheers_indexes'][wh] = index
+        return index
 
     def after_insert(self, mapper, connection, target):
         self.on_commit([[target, INSERT_KWD]])
@@ -320,14 +339,11 @@ class Whooshee(object):
                     method = getattr(wh, method_name, None)
                     if method:
                         if not writer:
-                            writer = wh.index.writer(timeout=self.writer_timeout)
+                            writer = type(self).get_or_create_index(_get_app(self), wh).\
+                                writer(timeout=_get_config(self)['writer_timeout'])
                         method(writer, change[0])
             if writer:
                 writer.commit()
-
-    def camel_to_snake(self, s):
-        """Constructs nice dir name from class name, e.g. FooBar => foo_bar."""
-        return self._underscore_re2.sub(r'\1_\2', self._underscore_re1.sub(r'\1_\2', s)).lower()
 
     def reindex(self):
         """ Reindex all data
@@ -336,7 +352,8 @@ class Whooshee(object):
         update_<model>() function for every instance of such model.
         """
         for wh in self.whoosheers:
-            writer = wh.index.writer(timeout=self.writer_timeout)
+            index = type(self).get_or_create_index(_get_app(self), wh)
+            writer = index.writer(timeout=_get_config(self)['writer_timeout'])
             for model in wh.models:
                 method_name = "{0}_{1}".format(UPDATE_KWD, model.__name__.lower())
                 for item in model.query.all():
