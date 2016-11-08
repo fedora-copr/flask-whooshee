@@ -291,6 +291,13 @@ class BaseTestCases(object):
             whoosheer = next(w for w in self.wh.whoosheers if set(w.models) == set([self.Entry]))
             self.assertEqual(len(whoosheer.search('blah blah blah')), 0)
 
+        def test_sqlalchemy_aliased(self):
+            # make sure that sqlalchemy aliased entities are recognized
+            self.db.session.add_all(self.all_inst)
+            self.db.session.commit()
+            alias = self.db.aliased(self.Entry)
+            self.assertEqual(len(self.User.query.join(alias).whooshee_search('chuck').all()), 3)
+
         # TODO: more :)
 
 class TestsWithApp(BaseTestCases.BaseTest):

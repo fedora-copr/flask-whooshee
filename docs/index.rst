@@ -273,6 +273,11 @@ API
 Changelog
 ---------
 
+development version
+###################
+
+* SQLAlchemy's aliased entities are now recognized by ``whooshee_search``.
+
 0.4.0
 #####
 

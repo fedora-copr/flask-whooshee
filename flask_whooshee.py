@@ -14,7 +14,9 @@ import whoosh.qparser
 from flask import current_app
 from flask_sqlalchemy import BaseQuery
 from sqlalchemy import text, event
+from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.mapper import Mapper
+from sqlalchemy.orm.util import AliasedClass, AliasedInsp
 
 INSERT_KWD = 'insert'
 UPDATE_KWD = 'update'
@@ -62,9 +64,16 @@ class WhoosheeQuery(BaseQuery):
             else:
                 # SQLAlchemy < 0.8.0
                 entities.update(set(self._join_entities))
+            # make sure we can work with aliased entities
+            unaliased = set()
+            for entity in entities:
+                if isinstance(entity, (AliasedClass, AliasedInsp)):
+                    unaliased.add(inspect(entity).mapper.class_)
+                else:
+                    unaliased.add(entity)
 
             whoosheer = next(w for w in _get_config(self)['whoosheers']
-                             if set(w.models) == entities)
+                             if set(w.models) == unaliased)
 
         # TODO what if unique field doesn't exist or there are multiple?
         for fname, field in list(whoosheer.schema._fields.items()):
