@@ -67,6 +67,7 @@ setup(
     url='https://github.com/bkabrda/flask-whooshee',
     license='BSD',
     py_modules=['flask_whooshee'],
+    test_suite='test',
     zip_safe=False,
     platforms='any',
     install_requires=[
