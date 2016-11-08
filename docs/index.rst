@@ -52,7 +52,7 @@ Following configuration options are available:
 | ``WHOOSHEE_WRITER_TIMEOUT`` | How long should whoosh try to acquire write lock? (defaults to **2**) |
 +-----------------------------+-----------------------------------------------------------------------+
 
-.. versionadded:: 0.3.2
+.. versionadded:: 0.4.0
     It's now possible to register whoosheers before calling ``init_app``.
 
     For example::
@@ -73,6 +73,9 @@ Following configuration options are available:
             id = db.Column(db.Integer, primary_key=True)
             text = db.Column(db.UnicodeText)
 
+
+.. versionchanged:: 0.4.0
+    The ``init_app`` function now works properly with multiple Flask application objects.
 
 How It Works
 ------------
@@ -266,6 +269,15 @@ API
 
 .. autoclass:: AbstractWhoosheer
     :members:
+
+Changelog
+---------
+
+0.4.0
+#####
+
+* ``init_app`` now properly registers multiple Flask applications.
+* It's now possible to register whoosheers before calling ``init_app``.
 
 
 Additional Information
