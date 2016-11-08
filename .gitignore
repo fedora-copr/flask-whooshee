@@ -35,5 +35,7 @@ nosetests.xml
 .pydevproject
 
 # PyCharm
-
 .idea
+
+# Sphinx
+docs/_build
