@@ -4,6 +4,7 @@ from unittest import TestCase
 import string
 
 import whoosh
+from whoosh.filedb.filestore import RamStorage
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
@@ -325,6 +326,105 @@ class TestsWithInitApp(BaseTestCases.BaseTest):
     def tearDown(self):
         super(TestsWithInitApp, self).tearDown()
         self.ctx.pop()
+
+
+class TestsAppWithMemoryStorage(TestCase):
+
+    def setUp(self):
+        self.app = Flask(__name__)
+
+        self.app.config['WHOOSHEE_MEMORY_STORAGE'] = True
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        self.app.config['TESTING'] = True
+        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+        self.db = SQLAlchemy(self.app)
+        self.wh = Whooshee(self.app)
+
+        class User(self.db.Model):
+            id = self.db.Column(self.db.Integer, primary_key=True)
+            name = self.db.Column(self.db.String)
+
+        # separate index for just entry
+        @self.wh.register_model('title', 'content')
+        class Entry(self.db.Model):
+            id = self.db.Column(self.db.Integer, primary_key=True)
+            title = self.db.Column(self.db.String)
+            content = self.db.Column(self.db.Text)
+            user = self.db.relationship(User, backref = self.db.backref('entries'))
+            user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
+
+        # index for both entry and user
+        @self.wh.register_whoosheer
+        class EntryUserWhoosheer(AbstractWhoosheer):
+            schema = whoosh.fields.Schema(
+                entry_id = whoosh.fields.NUMERIC(stored=True, unique=True),
+                user_id = whoosh.fields.NUMERIC(stored=True),
+                username = whoosh.fields.TEXT(),
+                title = whoosh.fields.TEXT(),
+                content = whoosh.fields.TEXT())
+
+            models = [Entry, User]
+
+            @classmethod
+            def update_user(cls, writer, user):
+                pass # TODO: update all users entries
+
+            @classmethod
+            def update_entry(cls, writer, entry):
+                writer.update_document(entry_id=entry.id,
+                                        user_id=entry.user.id,
+                                        username=entry.user.name,
+                                        title=entry.title,
+                                        content=entry.content)
+
+            @classmethod
+            def insert_user(cls, writer, user):
+                # nothing, user doesn't have entries yet
+                pass
+
+            @classmethod
+            def insert_entry(cls, writer, entry):
+                writer.add_document(entry_id=entry.id,
+                                    user_id=entry.user.id,
+                                    username=entry.user.name,
+                                    title=entry.title,
+                                    content=entry.content)
+
+            @classmethod
+            def delete_user(cls, writer, user):
+                # nothing, user doesn't have entries yet
+                pass
+
+            @classmethod
+            def delete_entry(cls, writer, entry):
+                writer.delete_by_term('entry_id', entry.id)
+
+        self.User = User
+        self.Entry = Entry
+        self.EntryUserWhoosheer = EntryUserWhoosheer
+
+        self.db.create_all(app=self.app)
+
+        self.u1 = User(name=u'chuck')
+        self.u2 = User(name=u'arnold')
+        self.u3 = User(name=u'silvester')
+
+        self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
+        self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
+        self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
+        self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
+
+        self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
+        self.db.session.add_all(self.all_inst)
+        self.db.session.commit()
+
+    def tearDown(self):
+        self.db.drop_all(app=self.app)
+
+    def test_memory_storage(self):
+        indexes = self.app.extensions['whooshee']['whoosheers_indexes']
+        self.assertIsInstance(indexes[self.EntryUserWhoosheer].storage, RamStorage)
 
 
 class TestMultipleApps(TestCase):

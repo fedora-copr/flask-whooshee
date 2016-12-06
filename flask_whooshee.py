@@ -10,6 +10,7 @@ import whoosh
 import whoosh.fields
 import whoosh.index
 import whoosh.qparser
+from whoosh.filedb.filestore import RamStorage
 
 from flask import current_app
 from flask_sqlalchemy import BaseQuery
@@ -237,6 +238,7 @@ class Whooshee(object):
         config['index_path_root'] = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
         config['writer_timeout'] = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
         config['search_string_min_len'] = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
+        config['memory_storage'] = app.config.get("WHOOSHEE_MEMORY_STORAGE", False)
 
         if app.config.get('WHOOSHE_MIN_STRING_LEN', None) is not None:
             warnings.warn(WhoosheeDeprecationWarning("The config key WHOOSHE_MIN_STRING_LEN has been renamed to WHOOSHEE_MIN_STRING_LEN. The mispelled config key is deprecated and will be removed in upcoming releases. Change it to WHOOSHEE_MIN_STRING_LEN to suppress this warning"))
@@ -340,15 +342,21 @@ class Whooshee(object):
         """
         # TODO: do we really want/need to use camel casing?
         # everywhere else, there is just .lower()
-        index_path = os.path.join(app.extensions['whooshee']['index_path_root'],
-                                  getattr(wh, 'index_subdir', cls.camel_to_snake(wh.__name__)))
-        if whoosh.index.exists_in(index_path):
-            index = whoosh.index.open_dir(index_path)
+        if app.extensions['whooshee']['memory_storage']:
+            storage = RamStorage()
+            index = storage.create_index(wh.schema)
+            assert index
+            return index
         else:
-            if not os.path.exists(index_path):
-                os.makedirs(index_path)
-            index = whoosh.index.create_in(index_path, wh.schema)
-        return index
+            index_path = os.path.join(app.extensions['whooshee']['index_path_root'],
+                                      getattr(wh, 'index_subdir', cls.camel_to_snake(wh.__name__)))
+            if whoosh.index.exists_in(index_path):
+                index = whoosh.index.open_dir(index_path)
+            else:
+                if not os.path.exists(index_path):
+                    os.makedirs(index_path)
+                index = whoosh.index.create_in(index_path, wh.schema)
+            return index
 
     @classmethod
     def camel_to_snake(self, s):
