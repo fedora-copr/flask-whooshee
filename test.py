@@ -424,7 +424,7 @@ class TestsAppWithMemoryStorage(TestCase):
 
     def test_memory_storage(self):
         indexes = self.app.extensions['whooshee']['whoosheers_indexes']
-        self.assertIsInstance(indexes[self.EntryUserWhoosheer].storage, RamStorage)
+        self.assertTrue(isinstance(indexes[self.EntryUserWhoosheer].storage, RamStorage))
 
 
 class TestMultipleApps(TestCase):
