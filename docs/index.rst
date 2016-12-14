@@ -51,6 +51,8 @@ Following configuration options are available:
 +-----------------------------+-----------------------------------------------------------------------+
 | ``WHOOSHEE_WRITER_TIMEOUT`` | How long should whoosh try to acquire write lock? (defaults to **2**) |
 +-----------------------------+-----------------------------------------------------------------------+
+| ``WHOOSHEE_MEMORY_STORAGE`` | Use the memory as storage. Useful for tests. (defaults to **False**)  |
++-----------------------------+-----------------------------------------------------------------------+
 
 .. versionadded:: 0.4.0
     It's now possible to register whoosheers before calling ``init_app``.
@@ -76,6 +78,10 @@ Following configuration options are available:
 
 .. versionchanged:: 0.4.0
     The ``init_app`` function now works properly with multiple Flask application objects.
+
+.. versionadded:: development
+    Added ``WHOOSHEE_MEMORY_STORAGE`` config variable.
+
 
 How It Works
 ------------
@@ -110,8 +116,8 @@ Create them like this::
         id = db.Column(db.Integer, primary_key=True)
         title = db.Column(db.String)
         content = db.Column(db.Text)
-        user = self.db.relationship(User, backref = self.db.backref('entries'))
-        user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
+        user = db.relationship(User, backref=db.backref('entries'))
+        user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
 Now we create a custom whoosheer class which we will use to update the
@@ -277,6 +283,8 @@ development version
 ###################
 
 * SQLAlchemy's aliased entities are now recognized by ``whooshee_search``.
+* Added support for ``RamStorage``. Can be enabled by setting
+  ``WHOOSHEE_MEMORY_STORAGE`` to ``True``.
 
 0.4.0
 #####
