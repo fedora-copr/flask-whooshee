@@ -279,8 +279,8 @@ API
 Changelog
 ---------
 
-development version
-###################
+0.4.1
+#####
 
 * SQLAlchemy's aliased entities are now recognized by ``whooshee_search``.
 * Added support for ``RamStorage``. Can be enabled by setting
