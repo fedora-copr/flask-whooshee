@@ -166,7 +166,7 @@ class AbstractWhoosheer(object):
         """
         s = search_string.strip()
         if not isinstance(s, unicode):
- +          s = unicode(s)
+            s = unicode(s)
         # we don't want stars from user
         s = s.replace('*', '')
         if len(s) < _get_config(cls)['search_string_min_len']:
