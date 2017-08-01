@@ -263,6 +263,24 @@ reindex your data::
 
 .. versionadded::  v0.0.9
 
+Manual index updates
+--------------------
+
+If your application depends heavily on write operations and
+there are lots of concurrent search-index updates, you might want
+opt for a cron job invoking :meth:`whooshee.reindex()` periodically
+instead of employing the default index auto-updating mechanism.
+
+This is especially recommended, if you encouter ``LockError`` raised
+by python-whoosh module and setting ``WHOOSHEE_WRITER_TIMEOUT``
+to a higher value (default is 2) does not help.
+
+To disable index auto updating, set ``auto_update`` class property of
+a Whoosheer to ``False``::
+
+    @whooshee.register_whoosheer
+    class NewEntryUserWhoosheer(EntryUserWhoosheer):
+        auto_update = False
 
 API
 ---
