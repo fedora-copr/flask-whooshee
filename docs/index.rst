@@ -297,6 +297,11 @@ API
 Changelog
 ---------
 
+* Python 2.6 is no longer officially supported, although flask-whooshee
+  should keep working on it.
+* Added the option to do manual index updates (through
+  ``AbstractWhoosheer.auto_update`` attribute).
+
 0.4.1
 #####
 
