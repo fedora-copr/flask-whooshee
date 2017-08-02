@@ -26,6 +26,11 @@ DELETE_KWD = 'delete'
 
 __version__ = '0.4.1'
 
+# handle unicode type in Python 3
+try:
+    unicode
+except NameError:
+    unicode = str
 
 def _get_app(obj):
     return (getattr(obj, 'app', None) or current_app)
