@@ -297,6 +297,8 @@ API
 Changelog
 ---------
 
+* Fixed whooshee search for `str` objects containing unicode characters
+  on Python 2.7.
 * Python 2.6 is no longer officially supported, although flask-whooshee
   should keep working on it.
 * Added the option to do manual index updates (through

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import shutil
 import tempfile
 from unittest import TestCase
@@ -316,7 +318,10 @@ class BaseTestCases(object):
             alias = self.db.aliased(self.Entry)
             self.assertEqual(len(self.User.query.join(alias).whooshee_search('chuck').all()), 3)
 
-        # TODO: more :)
+        def test_unicode_search(self):
+            # we just need to make sure this doesn't fail (problem only on py-2)
+            self.Entry.query.whooshee_search('ěšč').all()
+
 
 class TestsWithApp(BaseTestCases.BaseTest):
 
