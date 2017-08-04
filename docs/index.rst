@@ -42,17 +42,20 @@ configure whooshee at a later point::
 
 Following configuration options are available:
 
-+-----------------------------+-----------------------------------------------------------------------+
-| Option                      | Description                                                           |
-+=============================+=======================================================================+
-| ``WHOOSHEE_DIR``            | The path for the whoosh index (defaults to **whooshee**)              |
-+-----------------------------+-----------------------------------------------------------------------+
-| ``WHOOSHEE_MIN_STRING_LEN`` | Min. characters for the search string (defaults to **3**)             |
-+-----------------------------+-----------------------------------------------------------------------+
-| ``WHOOSHEE_WRITER_TIMEOUT`` | How long should whoosh try to acquire write lock? (defaults to **2**) |
-+-----------------------------+-----------------------------------------------------------------------+
-| ``WHOOSHEE_MEMORY_STORAGE`` | Use the memory as storage. Useful for tests. (defaults to **False**)  |
-+-----------------------------+-----------------------------------------------------------------------+
++------------------------------+-----------------------------------------------------------------------+
+| Option                       | Description                                                           |
++==============================+=======================================================================+
+| ``WHOOSHEE_DIR``             | The path for the whoosh index (defaults to **whooshee**)              |
++------------------------------+-----------------------------------------------------------------------+
+| ``WHOOSHEE_MIN_STRING_LEN``  | Min. characters for the search string (defaults to **3**)             |
++------------------------------+-----------------------------------------------------------------------+
+| ``WHOOSHEE_WRITER_TIMEOUT``  | How long should whoosh try to acquire write lock? (defaults to **2**) |
++------------------------------+-----------------------------------------------------------------------+
+| ``WHOOSHEE_MEMORY_STORAGE``  | Use the memory as storage. Useful for tests. (defaults to **False**)  |
++------------------------------+-----------------------------------------------------------------------+
+| ``WHOOSHEE_ENABLE_INDEXING`` | Specify whether or not to actually do any operations with the Whoosh  |
+|                              | index (defaults to **True**).                                         |
++------------------------------+-----------------------------------------------------------------------+
 
 .. versionadded:: 0.4.0
     It's now possible to register whoosheers before calling ``init_app``.
@@ -282,6 +285,21 @@ a Whoosheer to ``False``::
     class NewEntryUserWhoosheer(EntryUserWhoosheer):
         auto_update = False
 
+Enabling/disabling indexing
+---------------------------
+
+By setting the configuration option ``WHOOSHEE_ENABLE_INDEXING`` to
+``False``, you can turn of any operations with the Whoosh index
+(creating, updating and deleting entries). This can be useful e.g.
+when mass-importing large amounts of entries for testing purposes,
+but you don't actually need the whooshee fulltext search for
+these tests to pass.
+
+Note, that once the ``Whooshee(app)`` call is done, the value of this
+configuration setting can only be changed by using
+``app.extensions['whooshee']['enable_indexing'] = <value>`` (where
+``value`` is either ``True`` or ``False``).
+
 API
 ---
 
@@ -297,6 +315,9 @@ API
 Changelog
 ---------
 
+* Added configuration option ``WHOOSHEE_ENABLE_INDEXING`` that allows
+  turning off indexing (useful when importing large test sets that
+  don't require indexing in order to actually execute the tests).
 * Fixed whooshee search for `str` objects containing unicode characters
   on Python 2.7.
 * Python 2.6 is no longer officially supported, although flask-whooshee

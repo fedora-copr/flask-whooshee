@@ -243,6 +243,7 @@ class Whooshee(object):
         config['writer_timeout'] = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
         config['search_string_min_len'] = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
         config['memory_storage'] = app.config.get("WHOOSHEE_MEMORY_STORAGE", False)
+        config['enable_indexing'] = app.config.get('WHOOSHEE_ENABLE_INDEXING', True)
 
         if app.config.get('WHOOSHE_MIN_STRING_LEN', None) is not None:
             warnings.warn(WhoosheeDeprecationWarning("The config key WHOOSHE_MIN_STRING_LEN has been renamed to WHOOSHEE_MIN_STRING_LEN. The mispelled config key is deprecated and will be removed in upcoming releases. Change it to WHOOSHEE_MIN_STRING_LEN to suppress this warning"))
@@ -398,6 +399,9 @@ class Whooshee(object):
         """Method that gets called when a model is changed. This serves
         to do the actual index writing.
         """
+        if _get_config(self)['enable_indexing'] is False:
+            return None
+
         for wh in self.whoosheers:
             if not wh.auto_update:
                 continue

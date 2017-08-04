@@ -322,6 +322,24 @@ class BaseTestCases(object):
             # we just need to make sure this doesn't fail (problem only on py-2)
             self.Entry.query.whooshee_search('ěšč').all()
 
+        def test_enable_indexing(self):
+            # self.app.extensions['whooshee']['enable_indexing'] = False
+            self.db.session.add_all(self.all_inst)
+            self.db.session.commit()
+            # test joined search
+            found = self.Entry.query.join(self.User).whooshee_search('arnold').all()
+            self.assertEqual(found, [])
+            # test simple search
+            found = self.Entry.query.whooshee_search('arnold').all()
+            self.assertEqual(found, [])
+
+            # reenable and see if everything works now
+            self.app.extensions['whooshee']['enable_indexing'] = True
+            self.db.session.add(self.Entry(user=self.u1, title=u'newentry'))
+            self.db.session.commit()
+            found = self.Entry.query.whooshee_search('newentry').all()
+            self.assertEqual(len(found), 1)
+
 
 class TestsWithApp(BaseTestCases.BaseTest):
 
