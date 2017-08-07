@@ -323,7 +323,7 @@ class BaseTestCases(object):
             self.Entry.query.whooshee_search('ěšč').all()
 
         def test_enable_indexing(self):
-            # self.app.extensions['whooshee']['enable_indexing'] = False
+            self.app.extensions['whooshee']['enable_indexing'] = False
             self.db.session.add_all(self.all_inst)
             self.db.session.commit()
             # test joined search
