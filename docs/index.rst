@@ -285,6 +285,8 @@ a Whoosheer to ``False``::
     class NewEntryUserWhoosheer(EntryUserWhoosheer):
         auto_update = False
 
+.. versionadded::  v0.5.0
+
 Enabling/disabling indexing
 ---------------------------
 
@@ -300,6 +302,8 @@ configuration setting can only be changed by using
 ``app.extensions['whooshee']['enable_indexing'] = <value>`` (where
 ``value`` is either ``True`` or ``False``).
 
+.. versionadded::  v0.5.0
+
 API
 ---
 
@@ -314,6 +318,9 @@ API
 
 Changelog
 ---------
+
+0.5.0
+#####
 
 * Added configuration option ``WHOOSHEE_ENABLE_INDEXING`` that allows
   turning off indexing (useful when importing large test sets that
