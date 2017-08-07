@@ -58,7 +58,7 @@ from setuptools import setup
 
 setup(
     name='flask-whooshee',
-    version='0.4.1',
+    version='0.5.0',
     description='Flask-SQLAlchemy - Whoosh Integration',
     long_description=__doc__,
     keywords='flask, sqlalchemy, whoosh',
