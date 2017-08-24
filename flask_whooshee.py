@@ -174,7 +174,7 @@ class AbstractWhoosheer(object):
         if len(s) < _get_config(cls)['search_string_min_len']:
             raise ValueError('Search string must have at least 3 characters')
         # replace multiple with star space star
-        if match_substrings:
+        if match_substrings and ':' not in s:
             s = u'*{0}*'.format(re.sub('[\s]+', '* *', s))
         # TODO: some sanitization
         return s
