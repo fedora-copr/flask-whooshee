@@ -10,6 +10,7 @@ import whoosh
 import whoosh.fields
 import whoosh.index
 import whoosh.qparser
+from whoosh.writing import AsyncWriter
 from whoosh.filedb.filestore import RamStorage
 
 from flask import current_app
@@ -240,7 +241,6 @@ class Whooshee(object):
         # was called will be found
         config['whoosheers'] = self.whoosheers
         config['index_path_root'] = app.config.get('WHOOSHEE_DIR', '') or 'whooshee'
-        config['writer_timeout'] = app.config.get('WHOOSHEE_WRITER_TIMEOUT', 2)
         config['search_string_min_len'] = app.config.get('WHOOSHEE_MIN_STRING_LEN', 3)
         config['memory_storage'] = app.config.get("WHOOSHEE_MEMORY_STORAGE", False)
         config['enable_indexing'] = app.config.get('WHOOSHEE_ENABLE_INDEXING', True)
@@ -412,8 +412,7 @@ class Whooshee(object):
                     method = getattr(wh, method_name, None)
                     if method:
                         if not writer:
-                            writer = type(self).get_or_create_index(_get_app(self), wh).\
-                                writer(timeout=_get_config(self)['writer_timeout'])
+                            writer = AsyncWriter(type(self).get_or_create_index(_get_app(self), wh))
                         method(writer, change[0])
             if writer:
                 writer.commit()
@@ -427,7 +426,7 @@ class Whooshee(object):
         """
         for wh in self.whoosheers:
             index = type(self).get_or_create_index(_get_app(self), wh)
-            writer = index.writer(timeout=_get_config(self)['writer_timeout'])
+            writer = AsyncWriter(index)
             for model in wh.models:
                 method_name = "{0}_{1}".format(UPDATE_KWD, model.__name__.lower())
                 for item in model.query.all():
