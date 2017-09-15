@@ -49,8 +49,6 @@ Following configuration options are available:
 +------------------------------+-----------------------------------------------------------------------+
 | ``WHOOSHEE_MIN_STRING_LEN``  | Min. characters for the search string (defaults to **3**)             |
 +------------------------------+-----------------------------------------------------------------------+
-| ``WHOOSHEE_WRITER_TIMEOUT``  | How long should whoosh try to acquire write lock? (defaults to **2**) |
-+------------------------------+-----------------------------------------------------------------------+
 | ``WHOOSHEE_MEMORY_STORAGE``  | Use the memory as storage. Useful for tests. (defaults to **False**)  |
 +------------------------------+-----------------------------------------------------------------------+
 | ``WHOOSHEE_ENABLE_INDEXING`` | Specify whether or not to actually do any operations with the Whoosh  |
@@ -273,10 +271,6 @@ If your application depends heavily on write operations and
 there are lots of concurrent search-index updates, you might want
 opt for a cron job invoking :meth:`whooshee.reindex()` periodically
 instead of employing the default index auto-updating mechanism.
-
-This is especially recommended, if you encouter ``LockError`` raised
-by python-whoosh module and setting ``WHOOSHEE_WRITER_TIMEOUT``
-to a higher value (default is 2) does not help.
 
 To disable index auto updating, set ``auto_update`` class property of
 a Whoosheer to ``False``::
