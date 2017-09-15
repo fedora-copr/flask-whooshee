@@ -8,9 +8,9 @@ import string
 import whoosh
 from whoosh.filedb.filestore import RamStorage
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-
-from flask_whooshee import AbstractWhoosheer, Whooshee
+from flask_sqlalchemy import SQLAlchemy, BaseQuery
+from sqlalchemy.orm import Query as SQLAQuery
+from flask_whooshee import AbstractWhoosheer, Whooshee, WhoosheeQuery
 
 
 class BaseTestCases(object):
@@ -595,3 +595,87 @@ class TestMultipleApps(TestCase):
             q = self.Entry.query.whooshee_search('chuck')
             self.assertEqual(len(q.all()), 1)
             self.assertEqual(q[0].title, 'chuck nr. 1 article')
+
+
+class TestDoesntMixesWithModelQueryClass(TestCase):
+    def setUp(self):
+        self.app = Flask(__name__)
+
+        self.app.config['WHOOSHEE_MEMORY_STORAGE'] = True
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        self.app.config['TESTING'] = True
+        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+        self.db = SQLAlchemy(self.app)
+        self.wh = Whooshee(self.app)
+
+    def test_mixes_with_model_query(self):
+        class CustomQueryClass(BaseQuery):
+            pass
+
+        self._make_model_and_whoosheer(CustomQueryClass)
+        self.assertEqual('WhoosheeCustomQueryClass', self.user_model.query_class.__name__)
+
+    def test_doesnt_mix_with_default_query_class(self):
+        self._make_model_and_whoosheer(BaseQuery)
+        self.assertIs(self.wh.query, self.user_model.query_class)
+
+    def test_doesnt_mix_with_explicit_whooshee_query_class(self):
+        self._make_model_and_whoosheer(WhoosheeQuery)
+        self.assertIs(self.wh.query, self.user_model.query_class)
+
+    def test_doesnt_mix_with_whoosheequerywithapp(self):
+        self._make_model_and_whoosheer(self.wh.query)
+        self.assertIs(self.wh.query, self.user_model.query_class)
+
+    def test_doesnt_mix_with_SQLA_query_class(self):
+        self._make_model_and_whoosheer(SQLAQuery)
+        self.assertIs(self.wh.query, self.user_model.query_class)
+
+    def test_mixes_with_whooshee_query_subclass(self):
+        class CustomWhoosheeQuery(WhoosheeQuery):
+            pass
+
+        self._make_model_and_whoosheer(CustomWhoosheeQuery)
+        self.assertTrue(issubclass(self.user_model.query_class, CustomWhoosheeQuery))
+        self.assertTrue(issubclass(self.user_model.query_class, self.wh.query))
+
+    def test_overwrites_if_query_class_is_not_type(self):
+        self._make_model_and_whoosheer(5)
+        self.assertIs(self.wh.query, self.user_model.query_class)
+
+    def _make_model_and_whoosheer(self, query=None):
+        class User(self.db.Model):
+            query_class = query
+            id = self.db.Column(self.db.Integer, primary_key=True)
+            name = self.db.Column(self.db.String)
+
+        @self.wh.register_whoosheer
+        class UserWhoosheer(AbstractWhoosheer):
+            schema = whoosh.fields.Schema(
+                user_id = whoosh.fields.NUMERIC(stored=True),
+                username = whoosh.fields.TEXT())
+
+            models = [User]
+
+            @classmethod
+            def update_user(cls, writer, user):
+                pass # TODO: update all users entries
+
+            @classmethod
+            def update_entry(cls, writer, entry):
+                writer.update_document(user_id=entry.user.id,
+                                        username=entry.user.name)
+
+            @classmethod
+            def insert_user(cls, writer, user):
+                # nothing, user doesn't have entries yet
+                pass
+
+            @classmethod
+            def delete_user(cls, writer, user):
+                # nothing, user doesn't have entries yet
+                pass
+
+        self.user_model = User
+        self.user_whoosheer = UserWhoosheer

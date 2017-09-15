@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import warnings
+from inspect import isclass
 
 import sqlalchemy
 
@@ -18,6 +19,8 @@ from sqlalchemy import text, event
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.orm.util import AliasedClass, AliasedInsp
+from sqlalchemy.orm import Query as SQLAQuery
+
 
 INSERT_KWD = 'insert'
 UPDATE_KWD = 'update'
@@ -258,7 +261,6 @@ class Whooshee(object):
         our own query class which will provide the search functionality
         and store the app on the whoosheer, so that we can always work
         with that.
-
         :param wh: The whoosher which should be registered.
         """
         self.whoosheers.append(wh)
@@ -266,7 +268,24 @@ class Whooshee(object):
             event.listen(model, 'after_{0}'.format(INSERT_KWD), self.after_insert)
             event.listen(model, 'after_{0}'.format(UPDATE_KWD), self.after_update)
             event.listen(model, 'after_{0}'.format(DELETE_KWD), self.after_delete)
-            model.query_class = self.query
+            query_class = getattr(model, 'query_class', None)
+
+            if query_class is not None and isclass(query_class):
+                # already a subclass, ignore it
+                if issubclass(query_class, self.query):
+                    pass
+
+                # ensure there can be a stable MRO
+                elif query_class not in (BaseQuery, SQLAQuery, WhoosheeQuery):
+                    query_class_name = query_class.__name__
+                    model.query_class = type(
+                        "Whooshee{}".format(query_class_name), (query_class, self.query), {}
+                    )
+                else:
+                    model.query_class = self.query
+            else:
+                model.query_class = self.query
+
         if self.app:
             wh.app = self.app
         return wh
