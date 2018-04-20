@@ -29,6 +29,11 @@ DELETE_KWD = 'delete'
 
 __version__ = '0.5.0'
 
+# handle unicode type in Python 3
+try:
+    unicode
+except NameError:
+    unicode = str
 
 def _get_app(obj):
     return (getattr(obj, 'app', None) or current_app)
@@ -172,6 +177,8 @@ class AbstractWhoosheer(object):
         if sys.version < '3':
             search_string = search_string.decode('utf-8')
         s = search_string.strip()
+        if not isinstance(s, unicode):
+            s = unicode(s)
         # we don't want stars from user
         s = s.replace('*', '')
         if len(s) < _get_config(cls)['search_string_min_len']:
