@@ -169,8 +169,8 @@ class AbstractWhoosheer(object):
         :param match_substrings: ``True`` if you want to match substrings,
                                  ``False`` otherwise.
         """
-        if sys.version < '3':
-            search_string = unicode(search_string)
+        if sys.version < '3' and not isinstance(search_string, unicode):
+            search_string = search_string.decode('utf-8')
         s = search_string.strip()
         # we don't want stars from user
         s = s.replace('*', '')
