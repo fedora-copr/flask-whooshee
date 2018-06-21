@@ -170,7 +170,7 @@ class AbstractWhoosheer(object):
                                  ``False`` otherwise.
         """
         if sys.version < '3':
-            search_string = search_string.decode('utf-8')
+            search_string = unicode(search_string)
         s = search_string.strip()
         # we don't want stars from user
         s = s.replace('*', '')
