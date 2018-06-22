@@ -319,6 +319,13 @@ API
 Changelog
 ---------
 
+0.6.0
+#####
+
+* Fixed searching for unicode strings in Python 2. Thanks to Grey Li
+  for contributing the fix.
+* Added support for registering models with non-int primary keys.
+
 0.5.0
 #####
 
