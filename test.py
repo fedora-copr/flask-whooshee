@@ -321,6 +321,7 @@ class BaseTestCases(object):
         def test_unicode_search(self):
             # we just need to make sure this doesn't fail (problem only on py-2)
             self.Entry.query.whooshee_search('ěšč').all()
+            self.Entry.query.whooshee_search(u'ěšč').all()
 
         def test_enable_indexing(self):
             self.app.extensions['whooshee']['enable_indexing'] = False
