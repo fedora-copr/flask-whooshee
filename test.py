@@ -89,9 +89,15 @@ class BaseTestCases(object):
                 def delete_entry(cls, writer, entry):
                     writer.delete_by_term('entry_id', entry.id)
 
+            @self.wh.register_model('attribute')
+            class ModelWithNonIntID(self.db.Model):
+                id = self.db.Column(self.db.String, primary_key=True)
+                attribute = self.db.Column(self.db.String)
+
             self.User = User
             self.Entry = Entry
             self.EntryUserWhoosheer = EntryUserWhoosheer
+            self.ModelWithNonIntID = ModelWithNonIntID
 
             self.db.create_all()
 
@@ -104,7 +110,9 @@ class BaseTestCases(object):
             self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
             self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
 
-            self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
+            self.n1 = ModelWithNonIntID(id='guybrush', attribute='threepwood')
+
+            self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4, self.n1]
 
         def tearDown(self):
             shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
@@ -340,6 +348,19 @@ class BaseTestCases(object):
             self.db.session.commit()
             found = self.Entry.query.whooshee_search('newentry').all()
             self.assertEqual(len(found), 1)
+
+        def test_model_with_nonint_id(self):
+            self.db.session.add(self.n1)
+            self.db.session.commit()
+            found = self.ModelWithNonIntID.query.whooshee_search('threepwood').all()
+            self.assertEqual(len(found), 1)
+            found[0].attribute = 'LeChuck'
+            self.db.session.commit()
+            found = self.ModelWithNonIntID.query.whooshee_search('LeChuck').all()
+            self.assertEqual(len(found), 1)
+            self.n1.query.delete()
+            found = self.ModelWithNonIntID.query.whooshee_search('LeChuck').all()
+            self.assertEqual(len(found), 0)
 
 
 class TestsWithApp(BaseTestCases.BaseTest):

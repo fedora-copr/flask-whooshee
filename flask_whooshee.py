@@ -20,6 +20,7 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.orm.util import AliasedClass, AliasedInsp
 from sqlalchemy.orm import Query as SQLAQuery
+from sqlalchemy.types import Integer as SQLInteger
 
 
 INSERT_KWD = 'insert'
@@ -297,7 +298,15 @@ class Whooshee(object):
         """
         # construct subclass of AbstractWhoosheer for a model
         class ModelWhoosheer(AbstractWhoosheerMeta):
-            pass
+            @classmethod
+            def _assign_primary(cls, primary, primary_is_numeric, attrs, model):
+                attrs[primary] = getattr(model, primary)
+                if not primary_is_numeric:
+                    if sys.version < '3':
+                        attrs[primary] = unicode(attrs[primary])
+                    else:
+                        attrs[primary] = str(attrs[primary])
+
 
         mwh = ModelWhoosheer
 
@@ -309,7 +318,12 @@ class Whooshee(object):
             for field in model.__table__.columns:
                 if field.primary_key:
                     primary = field.name
-                    schema_attrs[field.name] = whoosh.fields.NUMERIC(stored=True, unique=True)
+                    primary_is_numeric = True
+                    if isinstance(field.type, SQLInteger):
+                        schema_attrs[field.name] = whoosh.fields.NUMERIC(stored=True, unique=True)
+                    else:
+                        primary_is_numeric = False
+                        schema_attrs[field.name] = whoosh.fields.ID(stored=True, unique=True)
                 elif field.name in index_fields:
                     schema_attrs[field.name] = whoosh.fields.TEXT(**kw)
             mwh.schema = whoosh.fields.Schema(**schema_attrs)
@@ -319,7 +333,8 @@ class Whooshee(object):
 
             @classmethod
             def update_model(cls, writer, model):
-                attrs = {primary: getattr(model, primary)}
+                attrs = {}
+                cls._assign_primary(primary, primary_is_numeric, attrs, model)
                 for f in index_fields:
                     attrs[f] = getattr(model, f)
                     if not isinstance(attrs[f], int):
@@ -331,7 +346,8 @@ class Whooshee(object):
 
             @classmethod
             def insert_model(cls, writer, model):
-                attrs = {primary: getattr(model, primary)}
+                attrs = {}
+                cls._assign_primary(primary, primary_is_numeric, attrs, model)
                 for f in index_fields:
                     attrs[f] = getattr(model, f)
                     if not isinstance(attrs[f], int):
