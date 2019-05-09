@@ -489,6 +489,56 @@ class TestsAppWithMemoryStorage(TestCase):
         self.assertTrue(isinstance(indexes[self.EntryUserWhoosheer].storage, RamStorage))
 
 
+class TestBigInteger(TestCase):
+
+    def setUp(self):
+        self.app = Flask(__name__)
+
+        self.app.config['WHOOSHEE_MEMORY_STORAGE'] = True
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        self.app.config['TESTING'] = True
+        self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+        self.db = SQLAlchemy(self.app)
+        self.wh = Whooshee(self.app)
+
+        class User(self.db.Model):
+            id = self.db.Column(self.db.Integer, primary_key=True)
+            name = self.db.Column(self.db.String)
+
+        # Need to make sure BigInteger PK's can be created
+        @self.wh.register_model('title', 'content')
+        class Entry(self.db.Model):
+            id = self.db.Column(self.db.BigInteger, primary_key=True)
+            title = self.db.Column(self.db.String)
+            content = self.db.Column(self.db.Text)
+            user = self.db.relationship(User, backref = self.db.backref('entries'))
+            user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
+
+        self.User = User
+        self.Entry = Entry
+
+        self.db.create_all(app=self.app)
+
+        self.u1 = User(name=u'chuck')
+        self.e1 = Entry(id=1000000000000, title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
+
+        self.db.session.commit()
+
+    def tearDown(self):
+        self.db.drop_all(app=self.app)
+
+    def test_add(self):
+            # test that the add operation works for Big Integer PK
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 0)
+
+            self.db.session.add(self.e1)
+            self.db.session.commit()
+
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 1)
+
 class TestMultipleApps(TestCase):
     def setUp(self):
         self.db = SQLAlchemy()
