@@ -20,7 +20,7 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.orm.util import AliasedClass, AliasedInsp
 from sqlalchemy.orm import Query as SQLAQuery
-from sqlalchemy.types import Integer as SQLInteger
+from sqlalchemy.types import Integer as SQLInteger, BigInteger as SQLBigInteger
 
 
 INSERT_KWD = 'insert'
@@ -319,7 +319,11 @@ class Whooshee(object):
                 if field.primary_key:
                     primary = field.name
                     primary_is_numeric = True
-                    if isinstance(field.type, SQLInteger):
+                    # First need to check if PK is of type BigInteger, as a BigInteger is of type Integer
+                    # but an Integer is not of type BigInteger
+                    if isinstance(field.type, SQLBigInteger):
+                        schema_attrs[field.name] = whoosh.fields.NUMERIC(bits=64, stored=True, unique=True)
+                    elif isinstance(field.type, SQLInteger):
                         schema_attrs[field.name] = whoosh.fields.NUMERIC(stored=True, unique=True)
                     else:
                         primary_is_numeric = False
