@@ -319,6 +319,15 @@ API
 Changelog
 ---------
 
+0.7.0
+#####
+
+* Dropped support for Python 3.3 and 3.4, added support for Python 3.7.
+* Added support for PK's of type BigInteger. Thanks to Andrew Henry
+  for contributing the fix.
+* Index writers now properly cancel Whoosh transaction and release index
+  lock on exceptions.
+
 0.6.0
 #####
 
