@@ -5,6 +5,7 @@ import tempfile
 from unittest import TestCase
 import string
 
+import flexmock
 import whoosh
 from whoosh.filedb.filestore import RamStorage
 from flask import Flask
@@ -278,6 +279,30 @@ class BaseTestCases(object):
             self.db.session.add(self.e1)
             self.db.session.commit()
 
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 1)
+
+        def test_writer_releases_lock_on_exception(self):
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 0)
+            # simulate a onetime random exception raised when writing index
+            expectation = flexmock(self.Entry._whoosheer_).\
+                    should_receive("insert_entry").\
+                    and_raise(Exception).\
+                    once()
+
+            with self.assertRaises(Exception):
+                self.db.session.add(self.e1)
+                self.db.session.commit()
+            self.db.session.rollback()
+
+            found = self.Entry.query.whooshee_search('blah blah blah').all()
+            self.assertEqual(len(found), 0)
+
+            expectation.reset()
+            # now let's try writing without the exception to verify that lock was released
+            self.db.session.add(self.e1)
+            self.db.session.commit()
             found = self.Entry.query.whooshee_search('blah blah blah').all()
             self.assertEqual(len(found), 1)
 
