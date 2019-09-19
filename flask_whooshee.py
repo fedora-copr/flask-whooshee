@@ -303,11 +303,18 @@ class Whooshee(object):
         on it.
         """
 
+        def resolve_model_attr_by_field(model, field_name):
+            model_cls = type(model)
+            for attr, field in model_cls.__mapper__.columns.items():
+                if field.name.lower() == field_name.lower():
+                    return attr
+            return None
+
         # construct subclass of AbstractWhoosheer for a model
         class ModelWhoosheer(AbstractWhoosheerMeta):
             @classmethod
             def _assign_primary(cls, primary, primary_is_numeric, attrs, model):
-                attrs[primary] = getattr(model, primary)
+                attrs[primary] = getattr(model, resolve_model_attr_by_field(model, primary))
                 if not primary_is_numeric:
                     if sys.version < '3':
                         attrs[primary] = unicode(attrs[primary])
@@ -317,82 +324,67 @@ class Whooshee(object):
         mwh = ModelWhoosheer
 
         def inner(model):
-            @event.listens_for(model, 'before_mapper_configured')
-            def receive_before_mapper_configured(mapper, cls):
-                mwh.index_subdir = model.__tablename__
-                mwh.models = [cls]
-                schema_attrs = {}
 
-                for name, field in mapper.columns.items():
-                    if field.primary_key:
-                        primary = name
-                        primary_is_numeric = True
-                        if isinstance(field.type, SQLBigInteger):
-                            schema_attrs[name] = whoosh.fields.NUMERIC(bits=64, stored=True, unique=True)
-                        elif isinstance(field.type, SQLInteger):
-                            schema_attrs[name] = whoosh.fields.NUMERIC(stored=True, unique=True)
+            mwh.index_subdir = model.__tablename__
+            mwh.models = [model]
+            schema_attrs = {}
+
+            for field in model.__table__.columns:
+                if field.primary_key:
+                    primary = field.name
+                    primary_is_numeric = True
+                    # First need to check if PK is of type BigInteger, as a BigInteger is of type Integer
+                    # but an Integer is not of type BigInteger
+                    if isinstance(field.type, SQLBigInteger):
+                        schema_attrs[field.name] = whoosh.fields.NUMERIC(bits=64, stored=True, unique=True)
+                    elif isinstance(field.type, SQLInteger):
+                        schema_attrs[field.name] = whoosh.fields.NUMERIC(stored=True, unique=True)
+                    else:
+                        primary_is_numeric = False
+                        schema_attrs[field.name] = whoosh.fields.ID(stored=True, unique=True)
+                elif field.name in index_fields:
+                    schema_attrs[field.name] = whoosh.fields.TEXT(**kw)
+            mwh.schema = whoosh.fields.Schema(**schema_attrs)
+            # we can't check with isinstance, because ModelWhoosheer is private
+            # so use this attribute to find out
+            mwh._is_model_whoosheer = True
+
+            @classmethod
+            def update_model(cls, writer, model):
+                attrs = {}
+                cls._assign_primary(primary, primary_is_numeric, attrs, model)
+                for f in index_fields:
+                    attrs[f] = getattr(model, resolve_model_attr_by_field(model, f))
+                    if not isinstance(attrs[f], int):
+                        if sys.version < '3':
+                            attrs[f] = unicode(attrs[f])
                         else:
-                            primary_is_numeric = False
-                            schema_attrs[name] = whoosh.fields.ID(stored=True, unique=True)
-                    elif name in index_fields:
-                        schema_attrs[name] = whoosh.fields.TEXT(**kw)
+                            attrs[f] = str(attrs[f])
+                writer.update_document(**attrs)
 
-                # for field in model.__table__.columns:
-                #     if field.primary_key:
-                #         primary = field.name
-                #         primary_is_numeric = True
-                #         # First need to check if PK is of type BigInteger, as a BigInteger is of type Integer
-                #         # but an Integer is not of type BigInteger
-                #         if isinstance(field.type, SQLBigInteger):
-                #             schema_attrs[field.name] = whoosh.fields.NUMERIC(bits=64, stored=True, unique=True)
-                #         elif isinstance(field.type, SQLInteger):
-                #             schema_attrs[field.name] = whoosh.fields.NUMERIC(stored=True, unique=True)
-                #         else:
-                #             primary_is_numeric = False
-                #             schema_attrs[field.name] = whoosh.fields.ID(stored=True, unique=True)
-                #     elif field.name in index_fields:
-                #         schema_attrs[field.name] = whoosh.fields.TEXT(**kw)
-                mwh.schema = whoosh.fields.Schema(**schema_attrs)
-                # we can't check with isinstance, because ModelWhoosheer is private
-                # so use this attribute to find out
-                mwh._is_model_whoosheer = True
+            @classmethod
+            def insert_model(cls, writer, model):
+                attrs = {}
+                cls._assign_primary(primary, primary_is_numeric, attrs, model)
+                for f in index_fields:
+                    attrs[f] = getattr(model, resolve_model_attr_by_field(model, f))
+                    if not isinstance(attrs[f], int):
+                        if sys.version < '3':
+                            attrs[f] = unicode(attrs[f])
+                        else:
+                            attrs[f] = str(attrs[f])
+                writer.add_document(**attrs)
 
-                @classmethod
-                def update_model(cls, writer, model):
-                    attrs = {}
-                    cls._assign_primary(primary, primary_is_numeric, attrs, model)
-                    for f in index_fields:
-                        attrs[f] = getattr(model, f)
-                        if not isinstance(attrs[f], int):
-                            if sys.version < '3':
-                                attrs[f] = unicode(attrs[f])
-                            else:
-                                attrs[f] = str(attrs[f])
-                    writer.update_document(**attrs)
+            @classmethod
+            def delete_model(cls, writer, model):
+                writer.delete_by_term(primary, getattr(model,resolve_model_attr_by_field(model, primary)))
 
-                @classmethod
-                def insert_model(cls, writer, model):
-                    attrs = {}
-                    cls._assign_primary(primary, primary_is_numeric, attrs, model)
-                    for f in index_fields:
-                        attrs[f] = getattr(model, f)
-                        if not isinstance(attrs[f], int):
-                            if sys.version < '3':
-                                attrs[f] = unicode(attrs[f])
-                            else:
-                                attrs[f] = str(attrs[f])
-                    writer.add_document(**attrs)
-
-                @classmethod
-                def delete_model(cls, writer, model):
-                    writer.delete_by_term(primary, getattr(model, primary))
-
-                setattr(mwh, '{0}_{1}'.format(UPDATE_KWD, model.__name__.lower()), update_model)
-                setattr(mwh, '{0}_{1}'.format(INSERT_KWD, model.__name__.lower()), insert_model)
-                setattr(mwh, '{0}_{1}'.format(DELETE_KWD, model.__name__.lower()), delete_model)
-                model._whoosheer_ = mwh
-                model.whoosh_search = mwh.search
-                self.register_whoosheer(mwh)
+            setattr(mwh, '{0}_{1}'.format(UPDATE_KWD, model.__name__.lower()), update_model)
+            setattr(mwh, '{0}_{1}'.format(INSERT_KWD, model.__name__.lower()), insert_model)
+            setattr(mwh, '{0}_{1}'.format(DELETE_KWD, model.__name__.lower()), delete_model)
+            model._whoosheer_ = mwh
+            model.whoosh_search = mwh.search
+            self.register_whoosheer(mwh)
 
             return model
 
