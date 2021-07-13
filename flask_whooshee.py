@@ -63,19 +63,14 @@ class WhoosheeQuery(BaseQuery):
             for cd in self.column_descriptions:
                 entities.add(cd['type'])
             # joined entities
-            if self._join_entities and isinstance(self._join_entities[0], Mapper):
-                # SQLAlchemy >= 0.8.0
-                entities.update(set([x.entity for x in self._join_entities]))
-            else:
-                # SQLAlchemy < 0.8.0
-                entities.update(set(self._join_entities))
+            if self._compile_state()._join_entities and isinstance(self._compile_state()._join_entities[0], Mapper):
+                # SQLAlchemy >= 1.4
+                entities.update(set([x.entity for x in self._compile_state()._join_entities]))
+
             # make sure we can work with aliased entities
             unaliased = set()
             for entity in entities:
-                if isinstance(entity, (AliasedClass, AliasedInsp)):
-                    unaliased.add(inspect(entity).mapper.class_)
-                else:
-                    unaliased.add(entity)
+                unaliased.add(entity)
 
             whoosheer = next(w for w in _get_config(self)['whoosheers']
                              if set(w.models) == unaliased)
