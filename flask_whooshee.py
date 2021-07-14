@@ -23,6 +23,9 @@ from sqlalchemy.orm import Query as SQLAQuery
 from sqlalchemy.types import Integer as SQLInteger, BigInteger as SQLBigInteger
 
 
+from sqlalchemy.sql import visitors
+from sqlalchemy.sql.annotation import AnnotatedTable, AnnotatedAlias
+
 INSERT_KWD = 'insert'
 UPDATE_KWD = 'update'
 DELETE_KWD = 'delete'
@@ -63,7 +66,13 @@ class WhoosheeQuery(BaseQuery):
             for cd in self.column_descriptions:
                 entities.add(cd['type'])
             # joined entities
-            if self._join_entities and isinstance(self._join_entities[0], Mapper):
+
+            if not hasattr(self, "_join_entities"):
+                # SQLAlchemy 1.4+
+                for node in visitors.iterate(self.statement, {}):
+                    if isinstance(node, AnnotatedTable) or isinstance(node, AnnotatedAlias):
+                        entities.add(node.entity_namespace)
+            elif self._join_entities and isinstance(self._join_entities[0], Mapper):
                 # SQLAlchemy >= 0.8.0
                 entities.update(set([x.entity for x in self._join_entities]))
             else:
