@@ -319,7 +319,7 @@ API
 Changelog
 ---------
 
-0.8.0
+0.8.1
 #####
 
 * SQLAlchemy 1.4+ compat fix included (missing `_join_entities` attribute)
