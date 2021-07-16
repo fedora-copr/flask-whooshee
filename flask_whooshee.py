@@ -1,4 +1,5 @@
 import abc
+import errno
 import os
 import re
 import sys
@@ -40,6 +41,12 @@ def _get_app(obj):
 def _get_config(obj):
     return _get_app(obj).extensions['whooshee']
 
+def _assure_dirs_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as err:
+        if err.errno != errno.EEXIST:
+            raise
 
 class WhoosheeQuery(BaseQuery):
     """An override for SQLAlchemy query used to do fulltext search."""
@@ -262,8 +269,8 @@ class Whooshee(object):
             warnings.warn(WhoosheeDeprecationWarning("The config key WHOOSHE_MIN_STRING_LEN has been renamed to WHOOSHEE_MIN_STRING_LEN. The mispelled config key is deprecated and will be removed in upcoming releases. Change it to WHOOSHEE_MIN_STRING_LEN to suppress this warning"))
             config['search_string_min_len'] = app.config.get('WHOOSHE_MIN_STRING_LEN')
 
-        if not os.path.exists(config['index_path_root']):
-            os.makedirs(config['index_path_root'])
+        _assure_dirs_exists(config['index_path_root'])
+
 
     def register_whoosheer(self, wh):
         """This will register the given whoosher on `whoosheers`, create the
@@ -406,8 +413,7 @@ class Whooshee(object):
             if whoosh.index.exists_in(index_path):
                 index = whoosh.index.open_dir(index_path)
             else:
-                if not os.path.exists(index_path):
-                    os.makedirs(index_path)
+                _assure_dirs_exists(index_path)
                 index = whoosh.index.create_in(index_path, wh.schema)
             return index
 
