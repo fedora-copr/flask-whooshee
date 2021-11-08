@@ -2,4 +2,5 @@
 
 # for testing and docs
 sphinx
-nose
+pytest
+flexmock

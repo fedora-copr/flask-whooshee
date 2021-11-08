@@ -76,7 +76,8 @@ setup(
         'Whoosh'
     ],
     tests_require=[
-        'nose'
+        'pytest',
+        'flexmock'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
