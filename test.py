@@ -5,7 +5,7 @@ import tempfile
 from unittest import TestCase
 import string
 
-import flexmock
+from flexmock import flexmock
 import whoosh
 from whoosh.filedb.filestore import RamStorage
 from flask import Flask
@@ -299,7 +299,12 @@ class BaseTestCases(object):
             found = self.Entry.query.whooshee_search('blah blah blah').all()
             self.assertEqual(len(found), 0)
 
-            expectation.reset()
+            # Compatibility with old flexmock for Python 2
+            if hasattr(expectation, "reset"):
+                expectation.reset()
+            else:
+                expectation._reset()
+
             # now let's try writing without the exception to verify that lock was released
             self.db.session.add(self.e1)
             self.db.session.commit()
