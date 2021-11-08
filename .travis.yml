@@ -11,6 +11,5 @@ python:
 
 install:
 - pip install -r requirements.txt
-- pip install nose flexmock
 
-script: nosetests
+script: pytest test.py
