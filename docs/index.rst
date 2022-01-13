@@ -319,6 +319,12 @@ API
 Changelog
 ---------
 
+0.8.2
+#####
+
+* Fixed compatibility with the latest flexmock
+* Switched from nose to pytest
+
 0.8.1
 #####
 
