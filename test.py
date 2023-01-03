@@ -100,7 +100,8 @@ class BaseTestCases(object):
             self.EntryUserWhoosheer = EntryUserWhoosheer
             self.ModelWithNonIntID = ModelWithNonIntID
 
-            self.db.create_all()
+            with self.app.app_context():
+                self.db.create_all()
 
             self.u1 = User(name=u'chuck')
             self.u2 = User(name=u'arnold')
@@ -118,7 +119,8 @@ class BaseTestCases(object):
         def tearDown(self):
             shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
             Whooshee.whoosheers = []
-            self.db.drop_all()
+            with self.app.app_context():
+                self.db.drop_all()
 
         # tests testing model whoosheers should have mw in their name, for custom whoosheers it's cw
         # ideally, there should be a separate class for model whoosheer and custom whoosheer
