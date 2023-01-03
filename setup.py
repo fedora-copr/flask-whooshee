@@ -65,7 +65,7 @@ setup(
     author='Bohuslav "Slavek" Kabrda',
     author_email='bkabrda@redhat.com',
     url='https://github.com/bkabrda/flask-whooshee',
-    license='BSD',
+    license='BSD-3-Clause',
     py_modules=['flask_whooshee'],
     test_suite='test',
     zip_safe=False,
