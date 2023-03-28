@@ -95,75 +95,81 @@ class BaseTestCases(object):
                 id = self.db.Column(self.db.String, primary_key=True)
                 attribute = self.db.Column(self.db.String)
 
-            self.User = User
-            self.Entry = Entry
-            self.EntryUserWhoosheer = EntryUserWhoosheer
-            self.ModelWithNonIntID = ModelWithNonIntID
+            with self.app.app_context():
+                self.User = User
+                self.Entry = Entry
+                self.EntryUserWhoosheer = EntryUserWhoosheer
+                self.ModelWithNonIntID = ModelWithNonIntID
 
-            self.db.create_all()
+                self.db.create_all()
 
-            self.u1 = User(name=u'chuck')
-            self.u2 = User(name=u'arnold')
-            self.u3 = User(name=u'silvester')
+                self.u1 = User(name=u'chuck')
+                self.u2 = User(name=u'arnold')
+                self.u3 = User(name=u'silvester')
 
-            self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
-            self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
-            self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
-            self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
+                self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
+                self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
+                self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
+                self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
 
-            self.n1 = ModelWithNonIntID(id='guybrush', attribute='threepwood')
+                self.n1 = ModelWithNonIntID(id='guybrush', attribute='threepwood')
 
-            self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4, self.n1]
+                self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4, self.n1]
 
         def tearDown(self):
-            shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
-            Whooshee.whoosheers = []
-            self.db.drop_all()
+            with self.app.app_context():
+                shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
+                Whooshee.whoosheers = []
+                self.db.drop_all()
 
         # tests testing model whoosheers should have mw in their name, for custom whoosheers it's cw
         # ideally, there should be a separate class for model whoosheer and custom whoosheer
         # but we also want to test how they coexist
 
         def test_nothing_found(self):
-            found = self.Entry.query.whooshee_search('not there!').all()
-            self.assertEqual(len(found), 0)
+            with self.app.app_context():
+                found = self.Entry.query.whooshee_search('not there!').all()
+                self.assertEqual(len(found), 0)
 
         def test_no_autoupdate(self):
-            for whoosheer in self.wh.whoosheers:
-                whoosheer.auto_update = False
-            self.db.session.add(self.u1)
-            self.db.session.commit()
+            with self.app.app_context():
+                for whoosheer in self.wh.whoosheers:
+                    whoosheer.auto_update = False
+                self.db.session.add(self.u1)
+                self.db.session.commit()
 
-            found = self.Entry.query.whooshee_search('chuck').all()
-            self.assertEqual(len(found), 0) # nothing is found
+                found = self.Entry.query.whooshee_search('chuck').all()
+                self.assertEqual(len(found), 0) # nothing is found
 
-            for whoosheer in self.wh.whoosheers:
-                whoosheer.auto_update = True
-            self.db.session.add(self.u2)
-            self.db.session.commit()
+                for whoosheer in self.wh.whoosheers:
+                    whoosheer.auto_update = True
+                self.db.session.add(self.u2)
+                self.db.session.commit()
 
-            found = self.Entry.query.whooshee_search('arnold').all()
-            self.assertEqual(len(found), 1) # arnold is found
+                found = self.Entry.query.whooshee_search('arnold').all()
+                self.assertEqual(len(found), 1) # arnold is found
 
         def test_mw_result_in_different_fields(self):
-            self.db.session.add_all(self.all_inst)
-            self.db.session.commit()
+            with self.app.app_context():
+                self.db.session.add_all(self.all_inst)
+                self.db.session.commit()
 
-            found = self.Entry.query.whooshee_search('chuck').all()
-            self.assertEqual(len(found), 2)
-            # there is no assertIn in Python 2.6
-            self.assertTrue(self.e1 in found)
-            self.assertTrue(self.e4 in found)
+                found = self.Entry.query.whooshee_search('chuck').all()
+                self.assertEqual(len(found), 2)
+                # there is no assertIn in Python 2.6
+                self.assertTrue(self.e1 in found)
+                self.assertTrue(self.e4 in found)
 
         def test_cw_result_in_different_tables(self):
-            self.db.session.add_all(self.all_inst)
-            self.db.session.commit()
+            with self.app.app_context():
+                self.db.session.add_all(self.all_inst)
+                self.db.session.commit()
 
-            found = self.Entry.query.join(self.User).whooshee_search('chuck').all()
-            self.assertEqual(len(found), 3)
-            self.assertTrue(self.e1 in found)
-            self.assertTrue(self.e2 in found)
-            self.assertTrue(self.e4 in found)
+                found = self.Entry.query.join(self.User).whooshee_search('chuck').all()
+                self.assertEqual(len(found), 3)
+                self.assertTrue(self.e1 in found)
+                self.assertTrue(self.e2 in found)
+                self.assertTrue(self.e4 in found)
 
         def test_more_items(self):
             expected_count = 0
@@ -180,53 +186,55 @@ class BaseTestCases(object):
                     for x in range(batch_size)
                 ]
 
-                self.db.session.add_all(self.entry_list)
-                self.db.session.commit()
+                with self.app.app_context():
+                    self.db.session.add_all(self.entry_list)
+                    self.db.session.commit()
 
-                found = self.Entry.query.whooshee_search('foobar', order_by_relevance=0).all()
+                    found = self.Entry.query.whooshee_search('foobar', order_by_relevance=0).all()
                 assert len(found) == expected_count
 
         def test_order_by_relevance(self):
-            entries_to_add = []
+            with self.app.app_context():
+                entries_to_add = []
 
-            for x in range(1, len(string.ascii_lowercase)+1):
-                content = u' '.join([string.ascii_lowercase[i]*3 for i in range(x)])
-                entries_to_add.append(self.Entry(title=u'{0}'.format(x), content=content, user=self.u1))
+                for x in range(1, len(string.ascii_lowercase)+1):
+                    content = u' '.join([string.ascii_lowercase[i]*3 for i in range(x)])
+                    entries_to_add.append(self.Entry(title=u'{0}'.format(x), content=content, user=self.u1))
 
-            self.db.session.add_all(entries_to_add)
-            self.db.session.commit()
+                self.db.session.add_all(entries_to_add)
+                self.db.session.commit()
 
-            search_string = u' '.join([string.ascii_lowercase[i]*3 for i in range(26)])
+                search_string = u' '.join([string.ascii_lowercase[i]*3 for i in range(26)])
 
-            # no sorting (this assumes (hopes) rows won't be returned in the correct order by default)
-            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=0).all()
-            titles = [int(entry.title) for entry in found_entries]
-            self.assertNotEqual(titles, sorted(titles, reverse=True))
+                # no sorting (this assumes (hopes) rows won't be returned in the correct order by default)
+                found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=0).all()
+                titles = [int(entry.title) for entry in found_entries]
+                self.assertNotEqual(titles, sorted(titles, reverse=True))
 
-            # sort all
-            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=-1).all()
-            titles = [int(entry.title) for entry in found_entries]
-            self.assertEqual(titles, sorted(titles, reverse=True))
+                # sort all
+                found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=-1).all()
+                titles = [int(entry.title) for entry in found_entries]
+                self.assertEqual(titles, sorted(titles, reverse=True))
 
-            # sort some (this assumes (hopes) the rest of the rows won't be returned in the correct order by default)
-            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=20).all()
-            titles = [int(entry.title) for entry in found_entries]
-            self.assertNotEqual(titles, sorted(titles, reverse=True))
+                # sort some (this assumes (hopes) the rest of the rows won't be returned in the correct order by default)
+                found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=20).all()
+                titles = [int(entry.title) for entry in found_entries]
+                self.assertNotEqual(titles, sorted(titles, reverse=True))
 
-            # sort all (by setting order_by_relevance to the number of returned search results)
-            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=26).all()
-            titles = [int(entry.title) for entry in found_entries]
-            self.assertEqual(titles, sorted(titles, reverse=True))
+                # sort all (by setting order_by_relevance to the number of returned search results)
+                found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=26).all()
+                titles = [int(entry.title) for entry in found_entries]
+                self.assertEqual(titles, sorted(titles, reverse=True))
 
-            # order_by after whooshee_search (note: order_by following whooshee_search has no impact for the first n results)
-            found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=26).order_by(self.Entry.id).all()
-            titles = [int(entry.title) for entry in found_entries]
-            self.assertEqual(titles, sorted(titles, reverse=True))
+                # order_by after whooshee_search (note: order_by following whooshee_search has no impact for the first n results)
+                found_entries = self.Entry.query.whooshee_search(search_string, order_by_relevance=26).order_by(self.Entry.id).all()
+                titles = [int(entry.title) for entry in found_entries]
+                self.assertEqual(titles, sorted(titles, reverse=True))
 
-            # order_by before whooshee_search (note: order_by is a primary criterion here and search ordering is secondary)
-            found_entries = self.Entry.query.order_by(self.Entry.id).whooshee_search(search_string, order_by_relevance=26).all()
-            titles = [int(entry.title) for entry in found_entries]
-            self.assertEqual(titles, sorted(titles))
+                # order_by before whooshee_search (note: order_by is a primary criterion here and search ordering is secondary)
+                found_entries = self.Entry.query.order_by(self.Entry.id).whooshee_search(search_string, order_by_relevance=26).all()
+                titles = [int(entry.title) for entry in found_entries]
+                self.assertEqual(titles, sorted(titles))
 
         def test_whoosheer_search_option(self):
 
@@ -248,68 +256,72 @@ class BaseTestCases(object):
                 def insert_entry(cls, writer, entry):
                     writer.add_document(entry_id=entry.id, title=entry.title+'cookie')
 
-            entry = self.Entry(title=u'secret_', content=u'blah blah blah', user=self.u1)
-            self.db.session.add(entry)
-            self.db.session.commit()
+            with self.app.app_context():
+                entry = self.Entry(title=u'secret_', content=u'blah blah blah', user=self.u1)
+                self.db.session.add(entry)
+                self.db.session.commit()
 
-            found = self.Entry.query.join(self.User).whooshee_search('secret_cookie').all()
-            self.assertEqual(len(found), 0)
-            found = self.Entry.query.join(self.User).whooshee_search('secret_cookie', whoosheer=EntryWhoosheer).all()
-            self.assertEqual(len(found), 1)
+                found = self.Entry.query.join(self.User).whooshee_search('secret_cookie').all()
+                self.assertEqual(len(found), 0)
+                found = self.Entry.query.join(self.User).whooshee_search('secret_cookie', whoosheer=EntryWhoosheer).all()
+                self.assertEqual(len(found), 1)
 
         def test_reindex(self):
-            self.db.session.add_all(self.all_inst)
-            self.db.session.commit()
-            # generall reindex
-            self.wh.reindex()
-            # put stallone directly in db and find him only after reindex
-            result = self.db.session.execute("INSERT INTO entry VALUES (100, 'rambo', 'pack of one two and three', {0})".format(self.u3.id))
-            self.db.session.commit()
-            found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
-            self.assertEqual(len(found), 0)
-            self.wh.reindex()
-            found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
-            self.assertEqual(len(found), 1)
+            with self.app.app_context():
+                self.db.session.add_all(self.all_inst)
+                self.db.session.commit()
+                # generall reindex
+                self.wh.reindex()
+                # put stallone directly in db and find him only after reindex
+                result = self.db.session.execute("INSERT INTO entry VALUES (100, 'rambo', 'pack of one two and three', {0})".format(self.u3.id))
+                self.db.session.commit()
+                found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
+                self.assertEqual(len(found), 0)
+                self.wh.reindex()
+                found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
+                self.assertEqual(len(found), 1)
 
         def test_add(self):
-            # test that the add operation works
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 0)
+            with self.app.app_context():
+                # test that the add operation works
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 0)
 
-            self.db.session.add(self.e1)
-            self.db.session.commit()
-
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 1)
-
-        def test_writer_releases_lock_on_exception(self):
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 0)
-            # simulate a onetime random exception raised when writing index
-            expectation = flexmock(self.Entry._whoosheer_).\
-                    should_receive("insert_entry").\
-                    and_raise(Exception).\
-                    once()
-
-            with self.assertRaises(Exception):
                 self.db.session.add(self.e1)
                 self.db.session.commit()
-            self.db.session.rollback()
 
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 0)
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 1)
 
-            # Compatibility with old flexmock for Python 2
-            if hasattr(expectation, "reset"):
-                expectation.reset()
-            else:
-                expectation._reset()
+        def test_writer_releases_lock_on_exception(self):
+            with self.app.app_context():
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 0)
+                # simulate a onetime random exception raised when writing index
+                expectation = flexmock(self.Entry._whoosheer_).\
+                        should_receive("insert_entry").\
+                        and_raise(Exception).\
+                        once()
 
-            # now let's try writing without the exception to verify that lock was released
-            self.db.session.add(self.e1)
-            self.db.session.commit()
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 1)
+                with self.assertRaises(Exception):
+                    self.db.session.add(self.e1)
+                    self.db.session.commit()
+                self.db.session.rollback()
+
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 0)
+
+                # Compatibility with old flexmock for Python 2
+                if hasattr(expectation, "reset"):
+                    expectation.reset()
+                else:
+                    expectation._reset()
+
+                # now let's try writing without the exception to verify that lock was released
+                self.db.session.add(self.e1)
+                self.db.session.commit()
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 1)
 
         # def test_update(self):
         #     # test that the update operation works
@@ -331,66 +343,71 @@ class BaseTestCases(object):
         #     self.assertEqual(len(found), 0)
 
         def test_delete(self):
-            # test that the delete operation works
-            self.db.session.add(self.e1)
-            self.db.session.commit()
+            with self.app.app_context():
+                # test that the delete operation works
+                self.db.session.add(self.e1)
+                self.db.session.commit()
 
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 1)
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 1)
 
-            self.db.session.delete(self.e1)
-            self.db.session.flush()
+                self.db.session.delete(self.e1)
+                self.db.session.flush()
 
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 0)
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 0)
 
-            # make sure that the entry has actually been deleted from the whoosh index
-            # https://github.com/bkabrda/flask-whooshee/pull/26#issuecomment-257549715
-            whoosheer = next(w for w in self.wh.whoosheers if set(w.models) == set([self.Entry]))
-            self.assertEqual(len(whoosheer.search('blah blah blah')), 0)
+                # make sure that the entry has actually been deleted from the whoosh index
+                # https://github.com/bkabrda/flask-whooshee/pull/26#issuecomment-257549715
+                whoosheer = next(w for w in self.wh.whoosheers if set(w.models) == set([self.Entry]))
+                self.assertEqual(len(whoosheer.search('blah blah blah')), 0)
 
         def test_sqlalchemy_aliased(self):
             # make sure that sqlalchemy aliased entities are recognized
-            self.db.session.add_all(self.all_inst)
-            self.db.session.commit()
-            alias = self.db.aliased(self.Entry)
-            self.assertEqual(len(self.User.query.join(alias).whooshee_search('chuck').all()), 3)
+            with self.app.app_context():
+                self.db.session.add_all(self.all_inst)
+                self.db.session.commit()
+                alias = self.db.aliased(self.Entry)
+                self.assertEqual(len(self.User.query.join(alias).whooshee_search('chuck').all()), 3)
 
         def test_unicode_search(self):
             # we just need to make sure this doesn't fail (problem only on py-2)
-            self.Entry.query.whooshee_search('ěšč').all()
-            self.Entry.query.whooshee_search(u'ěšč').all()
+            with self.app.app_context():
+                self.Entry.query.whooshee_search('ěšč').all()
+                self.Entry.query.whooshee_search(u'ěšč').all()
 
         def test_enable_indexing(self):
-            self.app.extensions['whooshee']['enable_indexing'] = False
-            self.db.session.add_all(self.all_inst)
-            self.db.session.commit()
-            # test joined search
-            found = self.Entry.query.join(self.User).whooshee_search('arnold').all()
-            self.assertEqual(found, [])
-            # test simple search
-            found = self.Entry.query.whooshee_search('arnold').all()
-            self.assertEqual(found, [])
+            with self.app.app_context():
+                self.app.extensions['whooshee']['enable_indexing'] = False
+                self.db.session.add_all(self.all_inst)
+                self.db.session.commit()
+                # test joined search
+                found = self.Entry.query.join(self.User).whooshee_search('arnold').all()
+                self.assertEqual(found, [])
+                # test simple search
+                found = self.Entry.query.whooshee_search('arnold').all()
+                self.assertEqual(found, [])
 
-            # reenable and see if everything works now
-            self.app.extensions['whooshee']['enable_indexing'] = True
-            self.db.session.add(self.Entry(user=self.u1, title=u'newentry'))
-            self.db.session.commit()
-            found = self.Entry.query.whooshee_search('newentry').all()
-            self.assertEqual(len(found), 1)
+                # reenable and see if everything works now
+                self.app.extensions['whooshee']['enable_indexing'] = True
+                self.db.session.add(self.Entry(user=self.u1, title=u'newentry'))
+                self.db.session.commit()
+                found = self.Entry.query.whooshee_search('newentry').all()
+                self.assertEqual(len(found), 1)
 
         def test_model_with_nonint_id(self):
-            self.db.session.add(self.n1)
-            self.db.session.commit()
-            found = self.ModelWithNonIntID.query.whooshee_search('threepwood').all()
-            self.assertEqual(len(found), 1)
-            found[0].attribute = 'LeChuck'
-            self.db.session.commit()
-            found = self.ModelWithNonIntID.query.whooshee_search('LeChuck').all()
-            self.assertEqual(len(found), 1)
-            self.n1.query.delete()
-            found = self.ModelWithNonIntID.query.whooshee_search('LeChuck').all()
-            self.assertEqual(len(found), 0)
+            with self.app.app_context():
+                self.db.session.add(self.n1)
+                self.db.session.commit()
+                found = self.ModelWithNonIntID.query.whooshee_search('threepwood').all()
+                self.assertEqual(len(found), 1)
+                found[0].attribute = 'LeChuck'
+                self.db.session.commit()
+                found = self.ModelWithNonIntID.query.whooshee_search('LeChuck').all()
+                self.assertEqual(len(found), 1)
+                self.n1.query.delete()
+                found = self.ModelWithNonIntID.query.whooshee_search('LeChuck').all()
+                self.assertEqual(len(found), 0)
 
 
 class TestsWithApp(BaseTestCases.BaseTest):
@@ -492,27 +509,29 @@ class TestsAppWithMemoryStorage(TestCase):
             def delete_entry(cls, writer, entry):
                 writer.delete_by_term('entry_id', entry.id)
 
-        self.User = User
-        self.Entry = Entry
-        self.EntryUserWhoosheer = EntryUserWhoosheer
+        with self.app.app_context():
+            self.User = User
+            self.Entry = Entry
+            self.EntryUserWhoosheer = EntryUserWhoosheer
 
-        self.db.create_all(app=self.app)
+            self.db.create_all()
 
-        self.u1 = User(name=u'chuck')
-        self.u2 = User(name=u'arnold')
-        self.u3 = User(name=u'silvester')
+            self.u1 = User(name=u'chuck')
+            self.u2 = User(name=u'arnold')
+            self.u3 = User(name=u'silvester')
 
-        self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
-        self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
-        self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
-        self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
+            self.e1 = Entry(title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
+            self.e2 = Entry(title=u'norris nr. 2 article', content=u'spam spam spam', user=self.u1)
+            self.e3 = Entry(title=u'arnold blah', content=u'spam is cool', user=self.u2)
+            self.e4 = Entry(title=u'the less dangerous', content=u'chuck is better', user=self.u3)
 
-        self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
-        self.db.session.add_all(self.all_inst)
-        self.db.session.commit()
+            self.all_inst = [self.u1, self.u2, self.u3, self.e1, self.e2, self.e3, self.e4]
+            self.db.session.add_all(self.all_inst)
+            self.db.session.commit()
 
     def tearDown(self):
-        self.db.drop_all(app=self.app)
+        with self.app.app_context():
+            self.db.drop_all()
 
     def test_memory_storage(self):
         indexes = self.app.extensions['whooshee']['whoosheers_indexes']
@@ -545,29 +564,32 @@ class TestBigInteger(TestCase):
             user = self.db.relationship(User, backref = self.db.backref('entries'))
             user_id = self.db.Column(self.db.Integer, self.db.ForeignKey('user.id'))
 
-        self.User = User
-        self.Entry = Entry
+        with self.app.app_context():
+            self.User = User
+            self.Entry = Entry
 
-        self.db.create_all(app=self.app)
+            self.db.create_all()
 
-        self.u1 = User(name=u'chuck')
-        self.e1 = Entry(id=1000000000000, title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
+            self.u1 = User(name=u'chuck')
+            self.e1 = Entry(id=1000000000000, title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
 
-        self.db.session.commit()
-
-    def tearDown(self):
-        self.db.drop_all(app=self.app)
-
-    def test_add(self):
-            # test that the add operation works for Big Integer PK
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 0)
-
-            self.db.session.add(self.e1)
             self.db.session.commit()
 
-            found = self.Entry.query.whooshee_search('blah blah blah').all()
-            self.assertEqual(len(found), 1)
+    def tearDown(self):
+        with self.app.app_context():
+            self.db.drop_all()
+
+    def test_add(self):
+            with self.app.app_context():
+                # test that the add operation works for Big Integer PK
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 0)
+
+                self.db.session.add(self.e1)
+                self.db.session.commit()
+
+                found = self.Entry.query.whooshee_search('blah blah blah').all()
+                self.assertEqual(len(found), 1)
 
 class TestMultipleApps(TestCase):
     def setUp(self):
@@ -646,8 +668,10 @@ class TestMultipleApps(TestCase):
         self.Entry = Entry
         self.EntryUserWhoosheer = EntryUserWhoosheer
 
-        self.db.create_all(app=self.app1)
-        self.db.create_all(app=self.app2)
+        with self.app1.app_context():
+            self.db.create_all()
+        with self.app2.app_context():
+            self.db.create_all()
 
         self.u1 = User(name=u'chuck')
         self.u2 = User(name=u'arnold')
@@ -663,8 +687,10 @@ class TestMultipleApps(TestCase):
     def tearDown(self):
         shutil.rmtree(self.app1.config['WHOOSHEE_DIR'], ignore_errors=True)
         shutil.rmtree(self.app2.config['WHOOSHEE_DIR'], ignore_errors=True)
-        self.db.drop_all(app=self.app1)
-        self.db.drop_all(app=self.app2)
+        with self.app1.app_context():
+            self.db.drop_all()
+        with self.app2.app_context():
+            self.db.drop_all()
 
     def test_multiple_apps(self):
         # IIUC, you can't add the same model instance under multiple apps with flask-sqlalchemy
