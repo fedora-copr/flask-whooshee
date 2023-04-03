@@ -1,0 +1,22 @@
+[MASTER]
+# Pickle collected data for later comparisons.
+persistent=no
+
+init-hook=
+    import os
+    import sys
+    import subprocess
+    gitrootdir = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode("utf-8").strip()
+    sys.path.insert(0, os.path.join(gitrootdir))
+
+[MESSAGES CONTROL]
+# Reasoning for wide warning ignore
+# ---------------------------------
+# import-error
+#     This is to work-around the issues in our diff-lint CI where we do not have
+#     all the build/runtime requirements installed.  We can ignore this error
+#     because the packaging CI would actually discover the import issues anyway.
+disable=import-error
+
+[DESIGN]
+min-public-methods=1
