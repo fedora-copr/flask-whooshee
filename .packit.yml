@@ -1,0 +1,23 @@
+---
+specfile_path: fedora/python-flask-whooshee.spec
+
+actions:
+  create-archive:
+    - python3 setup.py sdist --dist-dir ./fedora/
+    - bash -c "ls -1t ./fedora/*.tar.gz | head -n 1"
+  get-current-version: "sed -n \"s|.*version='\\(.*\\)'.*|\\1|p\" setup.py"
+
+jobs:
+  - &copr
+    job: copr_build
+    trigger: pull_request
+    metadata:
+      targets:
+        - fedora-all
+
+  - <<: *copr
+    trigger: commit
+    metadata:
+      owner: "@copr"
+      project: "flask-whooshee-prerelease"
+      branch: main
