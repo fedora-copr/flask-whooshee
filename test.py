@@ -31,6 +31,9 @@ class BaseTestCases(object):
 
         def setUp(self):
 
+            self.ctx = self.app.app_context()
+            self.ctx.push()
+
             class User(self.db.Model):
                 id = self.db.Column(self.db.Integer, primary_key=True)
                 name = self.db.Column(self.db.String)
@@ -119,6 +122,7 @@ class BaseTestCases(object):
             shutil.rmtree(self.app.config['WHOOSHEE_DIR'], ignore_errors=True)
             Whooshee.whoosheers = []
             self.db.drop_all()
+            self.ctx.pop()
 
         # tests testing model whoosheers should have mw in their name, for custom whoosheers it's cw
         # ideally, there should be a separate class for model whoosheer and custom whoosheer
@@ -412,13 +416,6 @@ class TestsWithInitApp(BaseTestCases.BaseTest):
         # intialization is possible
         self.wh.init_app(self.app)
 
-        self.ctx = self.app.app_context()
-        self.ctx.push()
-
-    def tearDown(self):
-        super(TestsWithInitApp, self).tearDown()
-        self.ctx.pop()
-
 
 class TestsAppWithMemoryStorage(TestCase):
 
@@ -432,6 +429,9 @@ class TestsAppWithMemoryStorage(TestCase):
 
         self.db = SQLAlchemy(self.app)
         self.wh = Whooshee(self.app)
+
+        self.ctx = self.app.app_context()
+        self.ctx.push()
 
         class User(self.db.Model):
             id = self.db.Column(self.db.Integer, primary_key=True)
@@ -496,7 +496,7 @@ class TestsAppWithMemoryStorage(TestCase):
         self.Entry = Entry
         self.EntryUserWhoosheer = EntryUserWhoosheer
 
-        self.db.create_all(app=self.app)
+        self.db.create_all()
 
         self.u1 = User(name=u'chuck')
         self.u2 = User(name=u'arnold')
@@ -512,7 +512,8 @@ class TestsAppWithMemoryStorage(TestCase):
         self.db.session.commit()
 
     def tearDown(self):
-        self.db.drop_all(app=self.app)
+        self.db.drop_all()
+        self.ctx.pop()
 
     def test_memory_storage(self):
         indexes = self.app.extensions['whooshee']['whoosheers_indexes']
@@ -520,6 +521,7 @@ class TestsAppWithMemoryStorage(TestCase):
 
 
 class TestBigInteger(TestCase):
+    # pylint: disable=too-many-instance-attributes
 
     def setUp(self):
         self.app = Flask(__name__)
@@ -531,6 +533,9 @@ class TestBigInteger(TestCase):
 
         self.db = SQLAlchemy(self.app)
         self.wh = Whooshee(self.app)
+
+        self.ctx = self.app.app_context()
+        self.ctx.push()
 
         class User(self.db.Model):
             id = self.db.Column(self.db.Integer, primary_key=True)
@@ -548,7 +553,7 @@ class TestBigInteger(TestCase):
         self.User = User
         self.Entry = Entry
 
-        self.db.create_all(app=self.app)
+        self.db.create_all()
 
         self.u1 = User(name=u'chuck')
         self.e1 = Entry(id=1000000000000, title=u'chuck nr. 1 article', content=u'blah blah blah', user=self.u1)
@@ -556,7 +561,8 @@ class TestBigInteger(TestCase):
         self.db.session.commit()
 
     def tearDown(self):
-        self.db.drop_all(app=self.app)
+        self.db.drop_all()
+        self.ctx.pop()
 
     def test_add(self):
             # test that the add operation works for Big Integer PK
@@ -646,8 +652,11 @@ class TestMultipleApps(TestCase):
         self.Entry = Entry
         self.EntryUserWhoosheer = EntryUserWhoosheer
 
-        self.db.create_all(app=self.app1)
-        self.db.create_all(app=self.app2)
+        with self.app1.app_context():
+            self.db.create_all()
+
+        with self.app2.app_context():
+            self.db.create_all()
 
         self.u1 = User(name=u'chuck')
         self.u2 = User(name=u'arnold')
@@ -663,8 +672,10 @@ class TestMultipleApps(TestCase):
     def tearDown(self):
         shutil.rmtree(self.app1.config['WHOOSHEE_DIR'], ignore_errors=True)
         shutil.rmtree(self.app2.config['WHOOSHEE_DIR'], ignore_errors=True)
-        self.db.drop_all(app=self.app1)
-        self.db.drop_all(app=self.app2)
+        with self.app1.app_context():
+            self.db.drop_all()
+        with self.app2.app_context():
+            self.db.drop_all()
 
     def test_multiple_apps(self):
         # IIUC, you can't add the same model instance under multiple apps with flask-sqlalchemy
