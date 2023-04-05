@@ -11,6 +11,7 @@ from whoosh.filedb.filestore import RamStorage
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy, BaseQuery
 from sqlalchemy.orm import Query as SQLAQuery
+from sqlalchemy.sql import text
 from flask_whooshee import AbstractWhoosheer, Whooshee, WhoosheeQuery
 
 
@@ -267,7 +268,7 @@ class BaseTestCases(object):
             # generall reindex
             self.wh.reindex()
             # put stallone directly in db and find him only after reindex
-            result = self.db.session.execute("INSERT INTO entry VALUES (100, 'rambo', 'pack of one two and three', {0})".format(self.u3.id))
+            result = self.db.session.execute(text("INSERT INTO entry VALUES (100, 'rambo', 'pack of one two and three', {0})".format(self.u3.id)))
             self.db.session.commit()
             found = self.Entry.query.join(self.User).whooshee_search('rambo').all()
             self.assertEqual(len(found), 0)
