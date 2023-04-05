@@ -1,10 +1,10 @@
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
     branches:
-    - master
+    - main
 
 name: Run Tox tests
 
@@ -20,7 +20,7 @@ jobs:
         tox_env: ${{ matrix.tox_env }}
     strategy:
       matrix:
-        tox_env: [py36, py37, py38, py39, py310]
+        tox_env: [py36, py37, py38, py39, py310, py311]
 
     # Use GitHub's Linux Docker host
     runs-on: ubuntu-latest
