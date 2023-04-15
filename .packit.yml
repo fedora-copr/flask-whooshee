@@ -1,11 +1,16 @@
 ---
 specfile_path: fedora/python-flask-whooshee.spec
 
+srpm_build_deps:
+  - python3-whoosh
+  - python3-flask-sqlalchemy
+  - python3-setuptools
+
 actions:
   create-archive:
     - python3 setup.py sdist --dist-dir ./fedora/
     - bash -c "ls -1t ./fedora/*.tar.gz | head -n 1"
-  get-current-version: "sed -n \"s|.*version='\\(.*\\)'.*|\\1|p\" setup.py"
+  get-current-version: "sed -n \"s|__version__ = '\\(.*\\)'.*|\\1|p\" flask_whooshee.py"
 
 jobs:
   - &copr

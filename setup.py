@@ -55,10 +55,12 @@ Links
 * `Issues <https://github.com/bkabrda/flask-whooshee/issues>`_
 """
 from setuptools import setup
+from flask_whooshee import __version__
+
 
 setup(
     name='flask-whooshee',
-    version='0.8.2',
+    version=__version__,
     description='Flask-SQLAlchemy - Whoosh Integration',
     long_description=__doc__,
     keywords='flask, sqlalchemy, whoosh',
