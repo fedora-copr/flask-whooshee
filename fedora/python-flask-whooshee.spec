@@ -5,7 +5,7 @@ Version:        0
 Release:        1%{?dist}
 Summary:        Whoosh integration
 
-License:        GPLv2+
+License:        BSD-3-Clause
 URL:            https://github.com/bkabrda/flask-whooshee
 Source0:        https://pypi.python.org/packages/source/f/%{mod_name}/%{mod_name}-%{version}.tar.gz
 # https://github.com/bkabrda/flask-whooshee/pull/19

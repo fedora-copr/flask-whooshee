@@ -319,6 +319,15 @@ API
 Changelog
 ---------
 
+0.9.0
+#####
+
+* Development switched from `master` to `main` branch.
+* Fixed compatiblity with flask-sqlalchemy v3+
+* Fixed compatibility with SQLAlchemy 2+
+* 285ae36576abc2ca26b74c490fbb3b954062f5c1
+* Switched to SPDX license ID format BSD-3-Clause
+
 0.8.2
 #####
 
