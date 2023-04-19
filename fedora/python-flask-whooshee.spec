@@ -6,7 +6,7 @@ Release:        1%{?dist}
 Summary:        Whoosh integration
 
 License:        BSD-3-Clause
-URL:            https://github.com/bkabrda/flask-whooshee
+URL:            https://github.com/fedora-copr/flask-whooshee
 Source0:        https://pypi.python.org/packages/source/f/%{mod_name}/%{mod_name}-%{version}.tar.gz
 # https://github.com/bkabrda/flask-whooshee/pull/19
 BuildArch:      noarch
@@ -25,13 +25,10 @@ BuildRequires:  python3-whoosh
 BuildRequires:  python3-flask
 BuildRequires:  python3-flask-sqlalchemy
 BuildRequires:  python3-flexmock
-BuildRequires:  python3-blinker
-BuildRequires:  python3-nose
 BuildRequires:  python3-pytest
 
 Requires:       python3-flask-sqlalchemy
 Requires:       python3-whoosh
-Requires:       python3-blinker
 Requires:       python3-flask
 
 %description -n python3-%{mod_name} %{_description}
