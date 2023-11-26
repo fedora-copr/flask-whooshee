@@ -9,7 +9,8 @@ from flexmock import flexmock
 import whoosh
 from whoosh.filedb.filestore import RamStorage
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy, BaseQuery
+from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy.query import Query
 from sqlalchemy.orm import Query as SQLAQuery
 from sqlalchemy.sql import text
 from flask_whooshee import AbstractWhoosheer, Whooshee, WhoosheeQuery
@@ -724,14 +725,14 @@ class TestDoesntMixesWithModelQueryClass(TestCase):
         self.wh = Whooshee(self.app)
 
     def test_mixes_with_model_query(self):
-        class CustomQueryClass(BaseQuery):
+        class CustomQueryClass(Query):
             pass
 
         self._make_model_and_whoosheer(CustomQueryClass)
         self.assertEqual('WhoosheeCustomQueryClass', self.user_model.query_class.__name__)
 
     def test_doesnt_mix_with_default_query_class(self):
-        self._make_model_and_whoosheer(BaseQuery)
+        self._make_model_and_whoosheer(Query)
         self.assertIs(self.wh.query, self.user_model.query_class)
 
     def test_doesnt_mix_with_explicit_whooshee_query_class(self):
