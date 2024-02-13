@@ -15,7 +15,10 @@ import whoosh.qparser
 from whoosh.filedb.filestore import RamStorage
 
 from flask import current_app
-from flask_sqlalchemy.query import Query
+try:
+    from flask_sqlalchemy.query import Query
+except ImportError:
+    from flask_sqlalchemy import BaseQuery as Query
 from sqlalchemy import text, event
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.mapper import Mapper
