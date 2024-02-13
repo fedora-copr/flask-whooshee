@@ -3,7 +3,7 @@ Flask-Whooshee
 
 [![Build Status](https://github.com/fedora-copr/flask-whooshee/actions/workflows/main.yml/badge.svg)](https://github.com/fedora-copr/flask-whooshee/actions)
 [![PyPI Version](https://img.shields.io/pypi/v/flask-whooshee.svg)](https://pypi.python.org/pypi/flask-whooshee)
-[![License](https://img.shields.io/badge/license-BSD-yellow.svg)](https://github.com/bkabrda/flask-whooshee)
+[![License](https://img.shields.io/badge/license-BSD-yellow.svg)](https://github.com/fedora-copr/flask-whooshee)
 
 *Adds Whoosh integration to Flask-SQLAlchemy.*
 
@@ -68,5 +68,5 @@ Links
 =====
 
 * [Documentation](https://flask-whooshee.readthedocs.io)
-* [Source Code](https://github.com/bkabrda/flask-whooshee)
-* [Issues](https://github.com/bkabrda/flask-whooshee/issues)
+* [Source Code](https://github.com/fedora-copr/flask-whooshee)
+* [Issues](https://github.com/fedora-copr/flask-whooshee/issues)

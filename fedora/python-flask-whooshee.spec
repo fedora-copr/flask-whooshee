@@ -8,7 +8,7 @@ Summary:        Whoosh integration
 License:        BSD-3-Clause
 URL:            https://github.com/fedora-copr/flask-whooshee
 Source0:        https://pypi.python.org/packages/source/f/%{mod_name}/%{mod_name}-%{version}.tar.gz
-# https://github.com/bkabrda/flask-whooshee/pull/19
+# https://github.com/fedora-copr/flask-whooshee/pull/19
 BuildArch:      noarch
 
 

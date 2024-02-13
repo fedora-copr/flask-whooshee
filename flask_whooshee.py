@@ -35,7 +35,7 @@ UPDATE_KWD = 'update'
 DELETE_KWD = 'delete'
 
 
-__version__ = '0.9.0'
+__version__ = '0.9.1'
 
 
 def _get_app(obj):

@@ -354,7 +354,7 @@ class BaseTestCases(object):
             self.assertEqual(len(found), 0)
 
             # make sure that the entry has actually been deleted from the whoosh index
-            # https://github.com/bkabrda/flask-whooshee/pull/26#issuecomment-257549715
+            # https://github.com/fedora-copr/flask-whooshee/pull/26#issuecomment-257549715
             whoosheer = next(w for w in self.wh.whoosheers if set(w.models) == set([self.Entry]))
             self.assertEqual(len(whoosheer.search('blah blah blah')), 0)
 

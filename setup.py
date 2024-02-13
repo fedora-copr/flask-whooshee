@@ -51,8 +51,8 @@ Links
 `````
 
 * `Documentation <https://flask-whooshee.readthedocs.io>`_
-* `Source Code <https://github.com/bkabrda/flask-whooshee>`_
-* `Issues <https://github.com/bkabrda/flask-whooshee/issues>`_
+* `Source Code <https://github.com/fedora-copr/flask-whooshee>`_
+* `Issues <https://github.com/fedora-copr/flask-whooshee/issues>`_
 """
 from setuptools import setup
 from flask_whooshee import __version__
@@ -66,7 +66,7 @@ setup(
     keywords='flask, sqlalchemy, whoosh',
     author='Bohuslav "Slavek" Kabrda',
     author_email='bkabrda@redhat.com',
-    url='https://github.com/bkabrda/flask-whooshee',
+    url='https://github.com/fedora-copr/flask-whooshee',
     license='BSD-3-Clause',
     py_modules=['flask_whooshee'],
     test_suite='test',
