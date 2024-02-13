@@ -136,11 +136,11 @@ html_theme_options = {
     'description': 'Adds Whoosh Integration to Flask-SQLAlchemy.',
     'github_button': False,
     'github_banner': True,
-    'github_user': 'bkabrda',
+    'github_user': 'fedora-copr',
     'github_repo': 'flask-whooshee',
     'extra_nav_links': {
-        'Flask-Whooshee @ PyPI': 'https://pypi.python.org/pypi/flask-whooshee',
-        'Flask-Whooshee @ GitHub': 'https://github.com/bkabrda/flask-whooshee',
+        'Flask-Whooshee @ PyPI': 'https://pypi.org/project/flask-whooshee',
+        'Flask-Whooshee @ GitHub': 'https://github.com/fedora-copr/flask-whooshee',
     }
 }
 
@@ -366,5 +366,5 @@ texinfo_documents = [
 intersphinx_mapping = {
     'https://docs.python.org/': None,
     'http://whoosh.readthedocs.io/en/latest/': None,
-    'http://flask-sqlalchemy.pocoo.org/latest/': None
+    'https://flask-sqlalchemy.palletsprojects.com/': None
 }
