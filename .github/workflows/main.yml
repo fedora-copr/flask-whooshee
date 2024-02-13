@@ -6,7 +6,7 @@ on:
     branches:
     - main
 
-name: Run Tox tests
+name: Tests
 
 jobs:
   tox_test:

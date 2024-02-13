@@ -1,7 +1,7 @@
 Flask-Whooshee
 ==============
 
-[![Build Status](https://travis-ci.org/bkabrda/flask-whooshee.svg?branch=master)](https://travis-ci.org/bkabrda/flask-whooshee)
+[![Build Status](https://github.com/fedora-copr/flask-whooshee/actions/workflows/main.yml/badge.svg)](https://github.com/fedora-copr/flask-whooshee/actions)
 [![PyPI Version](https://img.shields.io/pypi/v/flask-whooshee.svg)](https://pypi.python.org/pypi/flask-whooshee)
 [![License](https://img.shields.io/badge/license-BSD-yellow.svg)](https://github.com/bkabrda/flask-whooshee)
 
