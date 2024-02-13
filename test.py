@@ -10,7 +10,10 @@ import whoosh
 from whoosh.filedb.filestore import RamStorage
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_sqlalchemy.query import Query
+try:
+    from flask_sqlalchemy.query import Query
+except ImportError:
+    from flask_sqlalchemy import BaseQuery as Query
 from sqlalchemy.orm import Query as SQLAQuery
 from flask_whooshee import AbstractWhoosheer, Whooshee, WhoosheeQuery
 
