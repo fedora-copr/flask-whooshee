@@ -363,7 +363,7 @@ class BaseTestCases(object):
             self.db.session.add_all(self.all_inst)
             self.db.session.commit()
             alias = self.db.aliased(self.Entry)
-            self.assertEqual(len(self.User.query.join(alias).whooshee_search('chuck').all()), 3)
+            self.assertEqual(len(alias.query.join(self.User).whooshee_search('chuck').all()), 3)
 
         def test_unicode_search(self):
             # we just need to make sure this doesn't fail (problem only on py-2)
